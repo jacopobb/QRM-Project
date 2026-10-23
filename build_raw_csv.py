@@ -21,7 +21,9 @@ def read_one(path):
 if __name__ == "__main__":
     series = {}
     for ric in TICKERS:
-        path = os.path.join(RAW_DIR, f"{ric}.xlsx")
+        # accept both "NESN.S.xlsx" and "NESN.xlsx" (file named without the ".S" suffix)
+        candidates = [os.path.join(RAW_DIR, f"{n}.xlsx") for n in (ric, ric.split(".")[0])]
+        path = next(c for c in candidates if os.path.exists(c))
         series[ric] = read_one(path)
         print(f"{ric}: {series[ric].index.min().date()} -> {series[ric].index.max().date()}, {series[ric].notna().sum()} prices")
     pd.DataFrame(series).sort_index().to_csv(RAW_FILE)
