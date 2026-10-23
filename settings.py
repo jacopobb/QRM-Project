@@ -18,6 +18,7 @@ TICKERS = [v[0] for v in STOCKS.values()]
 ALPHAS = [0.05, 0.01]              # VaR levels
 H_REFIT = 20                       # re-estimate GARCH every h days
 BLOCK = 21                         # GEV block size (about 1 month)
+SEED = 42
 
 RAW_DIR   = "data/raw"             # the 12 LSEG exports, one file per RIC, e.g. NESN.S.xlsx
 RAW_FILE  = "data/prices_raw.csv"  # merged raw prices (built by build_raw_csv.py)
