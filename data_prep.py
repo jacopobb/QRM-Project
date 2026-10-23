@@ -1,6 +1,8 @@
 """Point 1 - load LSEG prices, remove holidays, compute log returns."""
 import numpy as np, pandas as pd
-from config import *
+import scipy, statsmodels, arch, matplotlib, seaborn
+from settings import *
+
 
 def load_clean_prices():
     px = pd.read_csv(RAW_FILE, index_col=0, parse_dates=True).sort_index()[TICKERS]
@@ -12,7 +14,7 @@ def load_clean_prices():
     return px.ffill().dropna()                      # isolated gaps: forward fill, then drop
 
 def log_returns(px):
-    return (100 * np.log(px).diff()).dropna()       # in %, helps the arch optimiser
+     return (100 * np.log(px).diff()).dropna()       # in %, helps the arch optimiser
 
 def make_port(rets, seed=SEED):
     """Point 3 - positive random weights (exponential), normalised to 1, fixed seed."""
