@@ -1,4 +1,4 @@
-"""Point 1 (collection) - merge the 12 LSEG Excel exports into data/prices_raw.csv.
+"""Point 1 (collection) - merge the 16 LSEG Excel exports into data/prices_raw.csv.
 Run once:  python build_raw_csv.py     File names must be the RIC, e.g. data/raw/NESN.S.xlsx"""
 import os, pandas as pd
 from settings import *
