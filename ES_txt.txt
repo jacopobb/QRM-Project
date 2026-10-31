@@ -1,0 +1,33 @@
+Why Case 5
+
+It models the part ES averages. ES is the average loss beyond the VaR. The GPD is fitted to exactly those exceedances over a threshold, whereas the GEV is fitted to block maxima and does not describe the tail beyond the VaR directly.
+It has a closed form. For the loss of Z, ES = (VaR + β − ξu) / (1 − ξ), which needs ξ < 1. Here ξ ranges from 0.04 to 0.31 across the series, so the condition holds. Under the GEV, ES needs numerical integration and is harder to defend.
+It behaves well in the backtest. At 1%, Case 5 has 48 violations against 42.5 expected and no rejection by any test. The Gaussian case has 80 violations, and Kupiec rejects it for 3 series.
+It is not the best case on every count. Case 4 has slightly fewer violations (46 at 1%, 226 at 5%) and is a bit closer to the target. I still prefer Case 5 for points 1 to 3, and a Case 4 ES would be harder to justify. At 5%, Case 5 has 236 violations against 212.5 expected, which is above the target but not rejected.
+
+What the script does
+
+It reads the forecast files (ret, mu, sigma_normal) and the GPD parameters table from evt.py.
+It computes ES for all 17 series at 5% and 1%, plus the Gaussian ES (Case 1) as a benchmark.
+It checks that its VaR matches the Case 5 VaR in the forecast files. The maximum difference is 4e-6, which is rounding.
+Like backtest.py, it only depends on the column names, so it can be rerun on your colleagues’ final files. If evt.py changes its parameter table, the columns u, xi, beta, Nu and n are what it needs.
+
+Outputs
+
+outputs/tables/S1_ES_summary.csv has average VaR and ES, the ES/VaR ratio, and the realised return on violation days against the forecast ES.
+outputs/tables/S2_ES_pooled_check.csv has the pooled check described below.
+Fig S1 shows returns, VaR, ES and violations for UBS, PORT and Sika. Sika was added automatically because it has the most 1% violations (6), so it is the most informative case. UBS and PORT have only 1 each.
+Fig S2 compares the ES/VaR ratio of the GPD and the Gaussian.
+outputs/es/<series>.csv holds the daily ES and VaR series.
+
+What it shows
+
+ES against Gaussian: The GPD-based ES is clearly larger than the Gaussian one. The ES/VaR ratio is 1.29 to 1.56 at 1% and 1.45 to 1.72 at 5%. A Gaussian model would understate the average loss on bad days.
+Check against the data: The GPD ES for Z is very close to the empirical average of the worst losses. For UBS at 1% it is 4.05 against 4.07 empirical, and the Gaussian value is 2.67. This supports the formula and the 90% threshold.
+ES check on violation days: I pooled the standardized shortfall residuals, (return − ES) / sigma, over all violation days. Their mean should be zero if ES is right, and it is not rejected: p = 0.78 at 5% (236 observations) and p = 0.55 at 1% (48 observations). The pooled series are cross-correlated and the violations are few, so call this indicative.
+
+For the report
+
+You can state that the case was chosen on theory (the tail model and the closed form) and confirmed by the backtest, not picked because it looked best.
+The ES check at 1% rests on very few violations per series, so I’d only interpret the pooled version.
+Your group has 4 members, so one ES case is enough. The Gaussian ES (Case 1) is only included as a comparison.
