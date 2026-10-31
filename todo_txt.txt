@@ -1,0 +1,28 @@
+I’ve written the new main.py, and the whole pipeline ran from scratch without errors. I read “do it” as the main.py option. The AI-tools and roles section of the report is still undone.
+
+What main.py does
+
+It runs each script as its own process, in this order: data_prep, descriptive, garch_models, evt, backtest, es.
+If a step fails, it stops and prints the exact command to resume from that step.
+It checks that the required packages are installed before starting.
+Figures are only saved by default, so nothing blocks waiting on a plot window. Use --show if you want them to open.
+Use --only and --skip to run part of the pipeline, for example python main.py --only evt backtest es.
+
+What I tested
+
+I ran everything from an empty outputs/ folder. The steps took about 1, 14, 32, 10, 5 and 4 seconds, so roughly a minute in total.
+I ran it a second time and compared all 66 output CSV files (tables, forecasts and ES series). They were identical, so anyone running your code should get the same numbers.
+I tested the descriptive step using your clean prices copied in as the raw file, because I don’t have data/prices_raw.csv.
+
+Things to know
+
+data_prep and descriptive read the raw LSEG export (data/prices_raw.csv). If that file is missing, main.py prints a note and skips those two steps, then uses the clean prices directly. For the final delivery, include the raw file so those steps run on your real data.
+When the raw file is present, data_prep rewrites data/prices_clean.csv and data/returns.csv. That is intended, but your final tables then come from that rebuilt file, so check it matches the clean CSV you gave me.
+main.py finds its settings in settings.py, or in config.py if that is the name you keep. The other scripts do the same.
+The old main.py is replaced. It referred to a config import and to functions that did not exist.
+
+What is still to do
+
+Report section: I can draft the AI-tools and roles section the assignment requires, with the tool, its purpose, and the prompts per point. Your group would need to confirm the prompts and who did what.
+Report text: I can also help with the written interpretation of the results, in statistical and economic terms, for points 3 to 9.
+Colleagues’ files: When your colleagues’ final GARCH and EVT files arrive, send them over and I’ll check them against the column contract used by backtest.py and es.py.
