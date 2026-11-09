@@ -37,19 +37,21 @@ def var_gev(params, p, m=BLOCK, theta=1.0):
     c, loc, scale = params
     return genextreme.ppf(p ** (m * theta), c, loc, scale)
 
-def fit_gpd(L, q=0.95):
-    u = np.quantile(L, q); exc = L[L > u] - u
+def fit_gpd(L, u):
+    """Slide 64-67: Adattamento GPD usando una soglia u scelta dal Mean Excess Plot."""
+    exc = L[L > u] - u
     xi, _, beta = genpareto.fit(exc, floc=0)
-    return u, xi, beta, len(L), len(exc)
+    T = len(L)
+    N_u = len(exc)
+    return u, xi, beta, T, N_u
 
-def var_gpd(u, xi, beta, n, nu, p):
-    return u + beta / xi * (((n / nu) * (1 - p)) ** (-xi) - 1)
+def var_gpd(u, xi, beta, T, N_u, alpha):
+    """Slide 72: q_alpha(F) = u + (beta/xi) * ((alpha / (N(u)/T))**(-xi) - 1)"""
+    return u + (beta / xi) * ((alpha / (N_u / T)) ** (-xi) - 1)
 
-def to_return_var(mu, sig, q_loss):
-    """Cases 3-5: back to returns with the GARCH forecasts. Loss VaR = -mu + sig*q; as return = -that."""
-    return mu - sig * q_loss
-# TODO: GEV QQ/PP plots + KS test, mean-excess plot, parameter-stability plot for threshold
-
+def to_return_var(mu, sig, q_z):
+    """Slide 75: q_alpha(F_x) = mu_{T+1} + sigma_{T+1} * q_alpha(F_z)"""
+    return mu + sig * q_z
 
 def main():
     ds = pd.read_csv("data/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
@@ -114,37 +116,92 @@ def main():
     tab_d = pd.DataFrame(rows).set_index(["series", "alpha"])
     print("\n=== E5d VaR of Z ===\n", tab_d.round(4).to_string()); tab_d.round(6).to_csv(f"{TABLE_DIR}/E5d_var_Z_gev.csv")
 
+    # --- PLOT E5: Istogramma Massimi a Blocchi vs Curva GEV ---
+    fig, axes = plt.subplots(5, 4, figsize=(14, 14)); axes = axes.ravel()
+    for ax, c in zip(axes, L.columns):
+        maxima = block_maxima(L[c])
+        params = gev_params[c] # c, loc, scale (ricorda che c = -xi)
+        
+        # Istogramma empirico dei massimi
+        ax.hist(maxima, bins=15, density=True, alpha=0.6, color='steelblue', edgecolor='black')
+        
+        # Curva teorica GEV
+        x_vals = np.linspace(maxima.min(), maxima.max(), 100)
+        # genextreme.pdf calcola la densità di probabilità (f_X(x) della slide 21)
+        pdf_vals = genextreme.pdf(x_vals, *params)
+        
+        ax.plot(x_vals, pdf_vals, 'r-', lw=2, label=f'GEV ($\\xi$={-params[0]:.2f})')
+        ax.set_title(c, fontsize=9)
+        ax.legend(fontsize=8)
+        
+    for ax in axes[len(L.columns):]: ax.axis("off")
+    fig.suptitle("Fig E5 - Histogram of Block Maxima with Fitted GEV Density")
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/E5_gev_histograms.png", dpi=150)
+
     ###############
     ### POINT 6 ###
     ###############
+    
+    # 1. Definiamo il dizionario delle soglie manuali (i "gomiti" letti sull'asse X)
+    manual_thresholds = {
+        "Swisscom": 1, "Nestle": 2.6, "Richemont": 1.3, "UBS": 1.6,
+        "Zurich": 1.9, "SwissRe": 0.9, "SwissLife": 1.5, "HelvetiaBaloise": 0.6,
+        "Roche": 1, "Novartis": 1.6, "Lonza": 2, "ABB": 1.3,
+        "Geberit": 1.6, "Givaudan": 2.1, "Holcim": 1.3, "Sika": 1.5,
+        "PORT": 1.3, "EWP": 2.2
+    }
 
-    # Applichiamo il metodo Peaks-Over-Threshold (POT) usando la GPD sulle perdite L
+    # --- PLOT: Mean Excess Plot per tutti gli asset (Scelta della soglia) ---
+    fig, axes = plt.subplots(5, 4, figsize=(14, 14))
+    axes = axes.ravel()
+    
+    for ax, c in zip(axes, L.columns):
+        losses_c = L[c].dropna().values
+        # Tagliamo a 98.5 per evitare il rumore estremo a destra come nei grafici del prof
+        thresholds = np.linspace(np.percentile(losses_c, 50), np.percentile(losses_c, 99.5), 60)
+        mean_excesses = []
+        for th in thresholds:
+            excesses = losses_c[losses_c > th] - th
+            mean_excesses.append(excesses.mean() if len(excesses) > 0 else np.nan)
+            
+        ax.plot(thresholds, mean_excesses, 'b.-', markersize=4)
+        
+        # Recuperiamo la soglia manuale u per questo asset (fallback 95% se non trovato)
+        u_val = manual_thresholds.get(c, np.percentile(losses_c, 95))
+        
+        ax.axvline(u_val, color='red', linestyle='--', linewidth=1.5, label=f'u = {u_val}')
+        ax.set_title(c, fontsize=9)
+        ax.legend(fontsize=8, loc='upper left')
+        
+    for ax in axes[len(L.columns):]: 
+        ax.axis("off")
+        
+    fig.suptitle("Fig E6a - Mean Excess Plots (Manual Threshold Selection)")
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/E6a_mean_excess_plots.png", dpi=150)
+
+    # --- CALCOLO VaR GPD CON SOGLIE MANUALI ---
     gpd_params = {}
     rows_gpd = []
 
     for c in L.columns:
-        # 1. Stima dei parametri GPD per ogni serie. 
-        # Di default fit_gpd usa come soglia (u) il quantile al 95% (q=0.95).
-        u, xi, beta, n, nu = fit_gpd(L[c].dropna(), q=0.95)
-        gpd_params[c] = {"u": u, "xi": xi, "beta": beta, "n": n, "nu": nu}
+        # 1. Recupero soglia e stima dei parametri GPD
+        u_val = manual_thresholds.get(c, np.percentile(L[c].dropna(), 95)) 
+        u, xi, beta, T_len, N_u = fit_gpd(L[c].dropna(), u=u_val)
         
-        # 2. Calcolo del VaR per i livelli alpha (0.05 e 0.01)
+        gpd_params[c] = {"u": u, "xi": xi, "beta": beta, "T": T_len, "N_u": N_u}
+        
+        # 2. Calcolo del VaR per i livelli alpha richiesti
         for a in ALPHAS:
-            p = 1 - a
-            var_g = var_gpd(u, xi, beta, n, nu, p)
-            var_emp = np.quantile(L[c].dropna(), p)
-            var_norm = norm.ppf(p)
+            var_g = var_gpd(u, xi, beta, T_len, N_u, alpha=a)
+            var_emp = np.quantile(L[c].dropna(), 1 - a)
+            var_norm = norm.ppf(1 - a)
             
             rows_gpd.append({
-                "series": c, 
-                "alpha": a, 
-                "threshold_u": u, 
-                "xi": xi, 
-                "beta": beta,
-                "n_exceedances": nu,
-                "VaR_GPD": var_g,
-                "VaR_empirical": var_emp,
-                "VaR_Normal": var_norm
+                "series": c, "alpha": a, "threshold_u": u, 
+                "xi": xi, "beta": beta, "n_exceedances": N_u,
+                "VaR_GPD": var_g, "VaR_empirical": var_emp, "VaR_Normal": var_norm
             })
             
     tab_gpd = pd.DataFrame(rows_gpd).set_index(["series", "alpha"])
@@ -154,17 +211,13 @@ def main():
     # --- PLOT E6: QQ-Plot delle eccedenze GPD vs Quantili Teorici GPD ---
     fig, axes = plt.subplots(5, 4, figsize=(14, 14)); axes = axes.ravel()
     for ax, c in zip(axes, L.columns):
-        # Estraiamo i parametri calcolati
         u = gpd_params[c]["u"]
         xi = gpd_params[c]["xi"]
         beta = gpd_params[c]["beta"]
         
-        # Filtriamo le eccedenze reali
         exc = L[c].dropna()[L[c].dropna() > u] - u
         exc_sorted = np.sort(exc)
         
-        # Calcoliamo i quantili teorici della GPD
-        # Formula: y = (beta/xi) * ((1-p)^(-xi) - 1)
         p = (np.arange(1, len(exc) + 1) - 0.5) / len(exc)
         theo_q = (beta / xi) * ((1 - p)**(-xi) - 1)
         
@@ -173,9 +226,37 @@ def main():
         ax.set_title(c, fontsize=9)
         
     for ax in axes[len(L.columns):]: ax.axis("off")
-    fig.suptitle("Fig E6 - QQ-plot of GPD exceedances"); fig.tight_layout()
+    fig.suptitle("Fig E6 - QQ-plot of GPD exceedances")
+    fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E6_gpd_qq.png", dpi=150)
     
+    # --- PLOT E6: Istogramma Eccedenze vs Curva GPD ---
+    fig, axes = plt.subplots(5, 4, figsize=(14, 14)); axes = axes.ravel()
+    for ax, c in zip(axes, L.columns):
+        u = gpd_params[c]["u"]
+        xi = gpd_params[c]["xi"]
+        beta = gpd_params[c]["beta"]
+        
+        # Estraiamo le eccedenze (y_t = x_t - u) come da slide 63
+        exc = L[c].dropna()[L[c].dropna() > u] - u
+        
+        # Istogramma empirico delle eccedenze
+        ax.hist(exc, bins=20, density=True, alpha=0.6, color='darkorange', edgecolor='black')
+        
+        # Curva teorica GPD
+        x_vals = np.linspace(0, exc.max(), 100)
+        # scipy.stats.genpareto usa c=xi, loc=0, scale=beta per la funzione g(y)
+        pdf_vals = genpareto.pdf(x_vals, c=xi, loc=0, scale=beta)
+        
+        ax.plot(x_vals, pdf_vals, 'r-', lw=2, label=f'GPD ($\\xi$={xi:.2f})')
+        ax.set_title(c, fontsize=9)
+        ax.legend(fontsize=8)
+        
+    for ax in axes[len(L.columns):]: ax.axis("off")
+    fig.suptitle("Fig E6 - Histogram of Exceedances with Fitted GPD Density")
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/E6_gpd_histograms.png", dpi=150)
+
     ###############
     ### POINT 7 ###
     ###############
@@ -194,20 +275,15 @@ def main():
         fc = pd.read_csv(fc_path, index_col=0, parse_dates=True)
         
         for a in ALPHAS:
-            # Quantile EVT 1: GEV indipendenza (nessun theta) -> Punto 5
-            q3 = tab_d.loc[(c, a), "VaR_GEV_no_theta"]
+            # Essendo Z = -L, il quantile dei residui standardizzati z_t è il negativo del VaR delle perdite
+            q_z3 = - tab_d.loc[(c, a), "VaR_GEV_no_theta"]
+            q_z4 = - tab_d.loc[(c, a), "VaR_GEV_with_theta"]
+            q_z5 = - tab_gpd.loc[(c, a), "VaR_GPD"]
             
-            # Quantile EVT 2: GEV con clustering (con theta) -> Punto 5
-            q4 = tab_d.loc[(c, a), "VaR_GEV_with_theta"]
-            
-            # Quantile EVT 3: GPD indipendenza -> Punto 6
-            q5 = tab_gpd.loc[(c, a), "VaR_GPD"]
-            
-            # Calcoliamo i nuovi VaR per i rendimenti (Case 3, 4, 5)
-            # Nota: si usa sigma_normal perché i residui sono stati estratti dal GARCH gaussiano
-            fc[f"VaR_case3_{a}"] = to_return_var(fc["mu"], fc["sigma_normal"], q3)
-            fc[f"VaR_case4_{a}"] = to_return_var(fc["mu"], fc["sigma_normal"], q4)
-            fc[f"VaR_case5_{a}"] = to_return_var(fc["mu"], fc["sigma_normal"], q5)
+            # Slide 75: Applichiamo la formula con il '+'
+            fc[f"VaR_case3_{a}"] = to_return_var(fc["mu"], fc["sigma_normal"], q_z3)
+            fc[f"VaR_case4_{a}"] = to_return_var(fc["mu"], fc["sigma_normal"], q_z4)
+            fc[f"VaR_case5_{a}"] = to_return_var(fc["mu"], fc["sigma_normal"], q_z5)
             
         # Sovrascriviamo il file CSV in outputs/forecasts aggiornandolo con le nuove colonne.
         # Questi file saranno pronti per essere letti dal punto 8 (backtesting) e punto 9 (ES).
@@ -233,24 +309,26 @@ def main():
     tab_e7.round(6).to_csv(f"{TABLE_DIR}/E7_avg_var_comparison.csv")
 
     # 2. Plot della serie storica del VaR per il portafoglio (PORT)
-    c = "PORT"
-    if os.path.exists(f"{FC_DIR}/{c}.csv"):
-        fc_port = pd.read_csv(f"{FC_DIR}/{c}.csv", index_col=0, parse_dates=True)
-        
-        fig, ax = plt.subplots(figsize=(12, 5))
-        # Plot dei rendimenti
-        ax.plot(fc_port.index, fc_port["ret"], label="PORT Returns", color="lightgrey", lw=1.5)
-        
-        # Plot delle 3 curve VaR all'1% (le rendiamo negative per metterle sul grafico dei rendimenti)
-        # Nota: nel file fc, i VaR per i ritorni sono già calcolati con il segno corretto dalla to_return_var
-        ax.plot(fc_port.index, fc_port["VaR_case1_0.01"], label="VaR 1% Case 1 (Normal)", color="blue", lw=1.2, alpha=0.8)
-        ax.plot(fc_port.index, fc_port["VaR_case4_0.01"], label="VaR 1% Case 4 (GEV with theta)", color="orange", lw=1.2, linestyle="--", alpha=0.8)
-        ax.plot(fc_port.index, fc_port["VaR_case5_0.01"], label="VaR 1% Case 5 (GPD)", color="red", lw=1.2, linestyle="-.", alpha=0.8)
-        
-        ax.set_title("Fig E7 - Out-of-Sample PORT Returns vs 1% VaR Models")
-        ax.set_ylabel("Returns / VaR (%)")
-        ax.legend(fontsize=9, loc="lower left")
-        fig.tight_layout()
-        fig.savefig(f"{FIG_DIR}/E7_VaR_OOS_PORT.png", dpi=150)
+    # --- PLOT E7: rendimenti OOS e VaR (Casi 1, 3, 4, 5) per TUTTE le serie, una figura per livello alpha ---
+    def plot_var_grid(a):
+        n = len(L.columns); nc = 4; nr = int(np.ceil(n / nc))
+        fig, axes = plt.subplots(nr, nc, figsize=(nc * 5, nr * 3), sharex=True); axes = axes.ravel()
+        for ax, c in zip(axes, L.columns):
+            fc = pd.read_csv(f"{FC_DIR}/{c}.csv", index_col=0, parse_dates=True)
+            ax.plot(fc.index, fc["ret"], color="lightgrey", lw=0.8, label="Returns")
+            ax.plot(fc.index, fc[f"VaR_case1_{a}"], color="blue",       lw=1.0, label="Case 1 (Normal)")
+            ax.plot(fc.index, fc[f"VaR_case3_{a}"], color="tab:green",  lw=1.8, label="Case 3 (GEV, no theta)")
+            ax.plot(fc.index, fc[f"VaR_case4_{a}"], color="tab:orange", lw=1.0, ls="--", label="Case 4 (GEV, theta)")
+            ax.plot(fc.index, fc[f"VaR_case5_{a}"], color="red",        lw=1.0, ls="-.", label="Case 5 (GPD)")
+            ax.set_title(c, fontsize=9); ax.tick_params(labelsize=7)
+        for ax in axes[n:]: ax.axis("off")
+        h, l = axes[0].get_legend_handles_labels()
+        fig.legend(h, l, loc="upper center", ncol=5, fontsize=9)
+        fig.suptitle(f"Fig E7 - OOS returns vs {int(a * 100)}% VaR, all series", y=1.0)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+        fig.savefig(f"{FIG_DIR}/E7_VaR_OOS_all_{int(a * 100)}pct.png", dpi=150)
+
+    for a in ALPHAS:
+        plot_var_grid(a)
 if __name__ == "__main__":
     main()
