@@ -33,6 +33,7 @@ assert round(sum(INDEX_WEIGHT.values()), 2) == 92.36, "weights should sum to 92.
 
 ALPHAS = [0.05, 0.01]              # VaR levels
 H_REFIT = 20                       # re-estimate GARCH every h days
+W_ROLL = 1000                      # rolling estimation window for the GARCH forecasts (days); None -> expanding window
 BLOCK = 21                         # GEV block size (about 1 month)
 
 RAW_DIR   = "data/raw"             # the 12 LSEG exports, one file per RIC, e.g. NESN.S.xlsx

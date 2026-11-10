@@ -42,6 +42,9 @@ def make_weights(tickers, seed=SEED):
 def port_returns(rets, w):
     return (rets[w.index] * w).sum(axis=1).rename("PORT")            # daily weighted average of returns
 
+def equal_weighted_portfolio(rets):
+    return rets.mean(axis=1).rename("EWP")                           # daily simple average of returns (weights 1/N)
+
 if __name__ == "__main__":
     px = clean_prices(load_raw())
     rets = log_returns(px)

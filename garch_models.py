@@ -16,46 +16,29 @@ import descriptive
 import data_prep   
 
 def spec(r, dist="normal", o=0, p=1, q=1, vol="GARCH"):
-    """Builds the model on the data it receives (in-sample or up to day t for forecasts). vol: "GARCH" (GJR if o>0) or "EGARCH"."""
+    """Constant-mean volatility model on the data it receives (GJR = "GARCH" with o>0)."""
     return arch_model(r, mean="Constant", vol=vol, p=p, o=o, q=q, dist=dist)
 
 def fit_in_sample(r, dist="normal", o=0, p=1, q=1, vol="GARCH"):
+    """Fits the model on the in-sample period only (up to IN_SAMPLE_END)."""
     return spec(r.loc[:IN_SAMPLE_END], dist, o, p, q, vol).fit(disp="off")    # in-sample cut here
 
-def find_spec(r, max_p=1, max_q=1, max_o=1, dist="normal"):
-    """In-sample grid by BIC. Returns the chosen orders (p, o, q); GJR kept only if gamma is significant."""
-    rows = {}
-    for p in range(1, max_p + 1):
-        for o in range(max_o + 1):
-            for q in range(1, max_q + 1):
-                res = fit_in_sample(r, dist, o, p, q)
-                rows[f"GARCH({p},{o},{q})"] = {"BIC": res.bic, "gamma_p": res.pvalues.get("gamma[1]", np.nan),
-                                               "p": p, "o": o, "q": q}
-    best = pd.DataFrame.from_dict(rows, orient="index").sort_values("BIC").iloc[0]
-    o = int(best["o"]) if best["gamma_p"] < 0.05 else 0                 # NaN < 0.05 is False -> o = 0
-    return int(best["p"]), o, int(best["q"])
-
-def persistence(params, vol="GARCH"):
-    """GARCH/GJR: sum alpha + sum beta + 0.5 * sum gamma.  EGARCH (log-variance): sum beta."""
-    beta = params.filter(regex=r"^beta\[\d+\]$").sum()
-    if vol == "EGARCH":
-        return beta
-    return beta + params.filter(regex=r"^alpha\[\d+\]$").sum() + 0.5 * params.filter(regex=r"^gamma\[\d+\]$").sum()
-
 def param_tables(table, series, res):
+    """Writes every estimated parameter with its p-value, BIC, AIC and log-likelihood """
     for name in res.params.index:                                    
         table.loc[series, name] = res.params[name]
         table.loc[series, f"{name}_p"] = res.pvalues[name]
-    table.loc[series, "persistence"] = persistence(res.params, res.model.volatility.name)
     table.loc[series, "BIC"] = res.bic
     table.loc[series, "AIC"] = res.aic
     table.loc[series, "MLL"] = res.loglikelihood
     return table
 
 def std_resid(res):
+    """In-sample standardised residuals Z of a fitted model."""
     return res.std_resid.dropna() # Z, in-sample standardised residuals
 
 def sign_bias_test(z):
+    """Engle-Ng (1993) sign and size bias tests: z^2_t on S-, S-*z and S+*z at t-1, joint test n*R^2 ~ chi2(3)."""
     z = z.dropna()
     z2, z_lag = (z ** 2).iloc[1:], z.shift(1).iloc[1:]
     neg = (z_lag < 0).astype(float)                                  # S- : 1 if yesterday's shock was negative
@@ -65,8 +48,7 @@ def sign_bias_test(z):
             "joint_p": chi2.sf(len(z2) * ols.rsquared, 3)}
 
 def table_serial_z(Z, lags=10):
-    """Tests on the GARCH standardised residuals Z: linear dependence (Z), ARCH effects (Z^2, ARCH-LM)
-    and asymmetry left (Engle-Ng sign bias tests)"""
+    """Tests on Z: linear dependence (Z), ARCH effects left (Z^2, ARCH-LM) and asymmetry left (sign bias)."""
     rows = {}
     for c in Z:
         z = Z[c].dropna()
@@ -84,16 +66,36 @@ def table_serial_z(Z, lags=10):
         rows[c] = row
     return pd.DataFrame.from_dict(rows, orient="index")
 
-def refine_spec(r, vol, p, o, q, diagn, alpha=0.05):
-    bic = lambda m: fit_in_sample(r, o=m[2], p=m[1], q=m[3], vol=m[0]).bic      # m = (vol, p, o, q)
-    if diagn["LB10_Z2_p"] < alpha or diagn["ARCH_LM10_p"] < alpha:
-        vol, p, o, q = min([(vol, pp, o, qq) for pp in (p, p + 1) for qq in (q, q + 1)], key=bic)
-    if diagn["joint_p"] < alpha:
-        if o == 0:
-           vol, p, o, q = min([("EGARCH",p,1,q),("GARCH",p,0,q)],key=bic)
-        elif vol == "GARCH":
-            vol, p, o, q = min([("GARCH", p, o, q),("GARCH", p, o + 1, q), ("EGARCH", p, o, q)], key=bic)
-    return vol, p, o, q
+def select_model(r, dist="normal", alpha=0.05):
+    """GARCH(1,1) -> GJR if joint rejects -> by BIC among sig. gamma: GJR1/GJR2/EGARCH/APARCH if joint still rejects, EGARCH/APARCH if GJR gamma not sig."""
+    rows, fits_m = {}, {}
+    def fit(vol, p, o, q):                                                      # fits a candidate and records its row
+        res = fit_in_sample(r, dist, o=o, p=p, q=q, vol=vol)
+        name = f"{res.model.volatility.name}({p},{o},{q})"                      # e.g. GJR-GARCH(1,1,1), GJR-GARCH(1,2,1)
+        fits_m[name] = res
+        rows[name] = {"vol": vol, "p": p, "o": o, "q": q, "BIC": res.bic,
+                      "gamma": res.params.get(f"gamma[{o}]", np.nan),         # last asymmetric term (gamma[2] if o=2)
+                      "gamma_p": res.pvalues.get(f"gamma[{o}]", np.nan),
+                      "delta": res.params.get("delta", np.nan), "delta_p": res.pvalues.get("delta", np.nan),
+                      **sign_bias_test(std_resid(res))}
+        return name
+    sig = lambda name: rows[name]["gamma_p"] < alpha                            # asymmetric model admissible only if gamma sig.
+    def best_of(names, default):                                                # lowest BIC among those with significant gamma
+        adm = [n for n in names if sig(n)]
+        return min(adm, key=lambda n: rows[n]["BIC"]) if adm else default
+    best = fit("GARCH", 1, 0, 1)
+    if rows[best]["joint_p"] < alpha:                                           # asymmetry left in the GARCH(1,1) Z
+        gjr = fit("GARCH", 1, 1, 1)                                             # GJR (vol="GARCH" with o=1)
+        if not sig(gjr):                                                        # GJR gamma not sig. -> EGARCH vs APARCH
+            best = best_of([fit("EGARCH", 1, 1, 1), fit("APARCH", 1, 1, 1)], best)
+        elif rows[gjr]["joint_p"] < alpha:                                      # GJR sig. but not enough -> GJR1/GJR2/EGARCH/APARCH
+            best = best_of([gjr, fit("GARCH", 1, 2, 1), fit("EGARCH", 1, 1, 1), fit("APARCH", 1, 1, 1)], gjr)
+        else:
+            best = gjr                                                          # GJR sig. and no asymmetry left
+    cand = pd.DataFrame.from_dict(rows, orient="index")
+    cand["chosen"] = cand.index == best
+    b = rows[best]
+    return cand, (b["vol"], b["p"], b["o"], b["q"]), fits_m[best]
 
 CANDIDATES = ["t", "skewt", "ged"]                                   # alternatives to the Normal
 
@@ -107,31 +109,55 @@ def z_normality(Z):
     return pd.DataFrame(rows).T
 
 def compare_distributions(r, orders):
-    """POINT 4c: refit each series' chosen model (vol, p, o, q) with Normal / t / skew-t / GED innovations;
-    the alternative density is the one with the lowest BIC among the candidates. Returns the IC table and the choice."""
+    """POINT 4c: refits each chosen model with Normal / t / skew-t / GED; alternative density = lowest BIC."""
     rows, best = [], {}
     for c in r:
         vol, p, o, q = orders[c]
         fits_d = {d: fit_in_sample(r[c], d, o, p, q, vol) for d in ["normal"] + CANDIDATES}
         for d, f in fits_d.items():
             k = f.model.distribution.num_params
-            shape = ", ".join(f"{n}={f.params[n]:.2f}" for n in f.params.index[-k:]) if k else ""
+            shape = ", ".join(f"{n}={f.params[n]:.2f} (p={f.pvalues[n]:.3f})" for n in f.params.index[-k:]) if k else ""
             rows.append({"series": c, "dist": d, "loglik": f.loglikelihood, "AIC": f.aic, "BIC": f.bic, "shape": shape})
         best[c] = min(CANDIDATES, key=lambda d: fits_d[d].bic)
     return pd.DataFrame(rows).set_index(["series", "dist"]), pd.Series(best, name="chosen_dist")
 
-def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, alphas=ALPHAS):
-    """One-step-ahead mu and sigma for every out-of-sample day (information up to t-1 only) with the series' chosen
-    model, plus the unit-variance quantile q_alpha of the innovation density; parameters re-estimated every h days
-    on an expanding window (h=None -> fixed at the in-sample estimates)."""
+def density_asymmetry_check(r, orders_pre, orders, best):
+    """Check: BIC and sign bias of original and refined models, with the Normal and with the chosen density."""
+    rows = {}
+    for c in r:
+        for stage, ords in [("original", orders_pre), ("refined", orders)]:
+            if stage == "refined" and orders[c] == orders_pre[c]: continue      # model not refined: same as the original
+            vol, p, o, q = ords[c]
+            row = {"model": f"{vol}({p},{o},{q})", "dist": best[c]}
+            for name, d in [("normal", "normal"), ("chosen", best[c])]:
+                f = fit_in_sample(r[c], d, o=o, p=p, q=q, vol=vol)
+                row[f"BIC_{name}"] = f.bic
+                row.update({f"{k}_{name}": v for k, v in sign_bias_test(std_resid(f)).items()})
+            rows[(c, stage)] = row
+    return pd.DataFrame(list(rows.values()), index=pd.MultiIndex.from_tuples(rows.keys(), names=["series", "stage"]))
+
+def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, window=W_ROLL, alphas=ALPHAS):
+    """One-step-ahead mu, sigma and quantiles q_alpha per OOS day; refit every h days on the last `window` days."""
     oos = r.index[r.index > IN_SAMPLE_END]
     step = h if h else len(oos)
-    out = []
+    out, prev = [], None                                                               # prev = previous block's fit
     for s in range(0, len(oos), step):
         block = oos[s:s + step]
-        res = spec(r[r.index < block[0]], dist, o, p, q, vol).fit(disp="off")          # estimated up to the day before the block
-        filt = spec(r.loc[:block[-1]], dist, o, p, q, vol).fix(res.params.values)      # filter with fixed parameters
-        sig = filt.conditional_volatility.loc[block]                                   # sigma_t uses returns up to t-1 only
+        train = r[r.index < block[0]]                                                  # data up to the day before the block
+        if window: train = train.iloc[-window:]                                        # rolling: only the last `window` days
+        mod = spec(train, dist, o, p, q, vol)
+        res = mod.fit(disp="off")
+        if prev is not None:                                                           # warm start from the previous block,
+            res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
+            if res_w.loglikelihood > res.loglikelihood: res = res_w
+        data = r.loc[:block[-1]].iloc[-(len(train) + len(block)):]                     # same window as the estimation + block
+        sigma = lambda fit: spec(data, dist, o, p, q, vol).fix(fit.params.values).conditional_volatility.loc[block]
+        sig = sigma(res)                                                               # sigma_t uses returns up to t-1 only
+        sd = train.std()
+        if prev is not None and not (0.25 * sd < sig.min() and sig.max() < 5 * sd):    # degenerate fit: keep previous parameters
+            print(f"  {r.name} {vol} {dist} block {block[0].date()}: implausible sigma, previous parameters kept")
+            res = prev; sig = sigma(res)
+        prev = res
         k = res.model.distribution.num_params
         q_a = norm.ppf(alphas) if dist == "normal" else res.model.distribution.ppf(np.array(alphas), res.params.iloc[-k:].values)
         df = pd.DataFrame({"mu": res.params["mu"], "sigma": sig})
@@ -150,7 +176,10 @@ if __name__ == "__main__":
     w.index = list(STOCKS.keys())
     print(w.round(4))
     w.to_csv("outputs/tables/G0_portfolio_weights.csv")
+    r_ewp = data_prep.equal_weighted_portfolio(r)                      
     r["PORT"] = data_prep.port_returns(r, w)
+    r["EWP"] = r_ewp
+
 
     #initialization point 3
     models=pd.DataFrame(index=r.columns, dtype=float)                   
@@ -158,37 +187,21 @@ if __name__ == "__main__":
     Z = pd.DataFrame(index=r.loc[:IN_SAMPLE_END].index, columns=r.columns, dtype=float)
     Z.index.name="date"
 
-    #Garch estimation
-    orders, fits = {}, {}
+    # Model selection: GARCH, GJR, EGARCH, APARCH (1,1) for every series, chosen by select_model (gamma significant,
+    # then no asymmetry left in the sign bias tests, then lowest BIC)
+    orders, fits, candidates = {}, {}, {}
     for column in r.columns:
-        p, o, q = find_spec(r[column])
-        orders[column] = ("GARCH", p, o, q)                          
-        res = fit_in_sample(r[column], o=o, p=p, q=q)
-        fits[column] = res                                           
+        candidates[column], orders[column], res = select_model(r[column])
+        fits[column] = res
         param_tables(models, column, res)
         Z[column] = std_resid(res)
-    Z_diagnostic=table_serial_z(Z, lags=10)
-
-    #Save output before refinement 
-    models.to_csv("outputs/tables/G1_garch_parameters_pre_refinement.csv")
-    Z_diagnostic.assign(model=[fits[c].model.volatility.name for c in Z_diagnostic.index]) \
-                .to_csv("outputs/tables/G2_Z_diagnostics_pre_refinement.csv")
-    pd.DataFrame(orders, index=["vol", "p", "o", "q"]).T.to_csv("outputs/tables/G0b_chosen_orders_pre_refinement.csv")
-
-    # Refinement
-    for column in Z_diagnostic.index:
-        new = refine_spec(r[column], *orders[column], Z_diagnostic.loc[column])
-        if new != orders[column]:
-            print(f"{column}: {orders[column]} -> {new}")
-            orders[column] = new
-            res = fit_in_sample(r[column], o=new[2], p=new[1], q=new[3], vol=new[0])
-            fits[column] = res
-            models.loc[column] = np.nan                             
-            param_tables(models, column, res)
-            Z[column] = std_resid(res)
+    candidates = pd.concat(candidates, names=["series", "model"])           # TABLE G0c: every candidate, chosen = True
+    print(candidates.round(4).to_string())
+    candidates.to_csv("outputs/tables/G0c_model_candidates.csv")
     Z_diagnostic = table_serial_z(Z, lags=10)
+    orders_pre = {c: ("GARCH", 1, 0, 1) for c in r}                     # GARCH(1,1) benchmark, for density_asymmetry_check
 
-    #Save output after refinement
+    #Save output
     models.to_csv("outputs/tables/G1_garch_parameters.csv")# TABLE G1: GARCH parameters and p-values (point 3, significance)
     Z_diagnostic["model"] = [fits[c].model.volatility.name for c in Z_diagnostic.index]   # GARCH / GJR-GARCH / EGARCH
     Z_diagnostic.to_csv("outputs/tables/G2_Z_diagnostics.csv") # TABLE G2: dependence and asymmetry left in Z (justifies the chosen model)
@@ -223,13 +236,31 @@ if __name__ == "__main__":
     fig.suptitle("Fig G2 - Normal QQ-plots of in-sample standardised residuals Z"); fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/G2_Z_qqplots.png", dpi=150)
 
-    # ---------- POINT 4c: choice of the alternative density (lowest BIC among t, skew-t, GED) (TABLES G4, G4b)
+    # Choice of the alternative density (lowest BIC among t, skew-t, GED) (TABLES G4, G4b)
     ic, best = compare_distributions(r, orders)
     ic.to_csv("outputs/tables/G4_distribution_comparison.csv"); best.to_frame().to_csv("outputs/tables/G4b_chosen_distribution.csv")
     print("\nChosen density counts:\n", best.value_counts().to_string())
 
-    # ---------- POINT 4d: same forecasts with the chosen density in the GARCH -> VaR Case 2; comparison with Case 1 (TABLE G5)
-    # one CSV per series in outputs/forecasts: read by evt.py (mu, sigma_normal), backtest.py and es.py (ret, VaR_*)
+    # QQ-plots of the standardised residuals of the model with the chosen density 
+    fig, axes = plt.subplots(nr, nc, figsize=(nc * 3.6, nr * 2.8)); axes = axes.ravel()
+    for ax, c in zip(axes, r):
+        vol, p, o, q = orders[c]
+        f = fit_in_sample(r[c], best[c], o=o, p=p, q=q, vol=vol)            # model refitted with the chosen density
+        z = np.sort(std_resid(f).values)
+        k = f.model.distribution.num_params
+        pp = (np.arange(1, len(z) + 1) - 0.5) / len(z)                         # plotting positions
+        qt = f.model.distribution.ppf(pp, f.params.iloc[-k:].values)            # theoretical quantiles (unit variance)
+        ax.scatter(qt, z, s=3); ax.plot(qt, qt, "r", lw=.8)
+        ax.set_title(f"{c} ({best[c]})", fontsize=9)
+    for ax in axes[n:]: ax.axis("off")
+    fig.suptitle("Fig G2b - QQ-plots of standardised residuals vs the chosen density"); fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/G2b_Z_qqplots_chosen_density.png", dpi=150)
+
+    # Personal check, not part of the outputs: uncomment to see if the asymmetry left depends on the Gaussian density
+    print(density_asymmetry_check(r, orders_pre, orders, best).round(4).to_string())
+
+    #Same forecasts with the chosen density in the GARCH -> VaR Case 2; comparison with Case 1 (TABLE G5)
+    #read by evt.py (mu, sigma_normal), backtest.py and es.py (ret, VaR_*)
     FC_DIR = "outputs/forecasts"; os.makedirs(FC_DIR, exist_ok=True)
     summary = []
     for c in r:
