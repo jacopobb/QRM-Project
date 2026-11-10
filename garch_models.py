@@ -170,6 +170,11 @@ def var_from_forecasts(fc, alphas=ALPHAS):
     return pd.DataFrame({a: fc["mu"] + fc["sigma"] * fc[f"q_{a}"] for a in alphas})
 
 if __name__ == "__main__":
+    # remove the tables written by older versions of this script (no longer produced)
+    for f in ["G0b_chosen_orders_pre_refinement", "G0c_asymmetry_candidates", "G1_garch_parameters_pre_refinement",
+              "G2_Z_diagnostics_pre_refinement", "T6_port_weights", "T7_garch_params_insample", "T8_Z_insample"]:
+        if os.path.exists(f"outputs/tables/{f}.csv"): os.remove(f"outputs/tables/{f}.csv")
+
     #load data
     px, r = descriptive.load_data()
     w = data_prep.make_weights(TICKERS)
