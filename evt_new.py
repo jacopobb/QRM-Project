@@ -4,6 +4,7 @@ import pandas as pd
 from scipy.stats import genextreme, genpareto, norm, kstest
 from settings import *
 import matplotlib.pyplot as plt
+import os
 
 TABLE_DIR, FIG_DIR = "outputs/tables", "outputs/figures"
 
@@ -145,11 +146,11 @@ def main():
     
     # 1. Definiamo il dizionario delle soglie manuali (i "gomiti" letti sull'asse X)
     manual_thresholds = {
-        "Swisscom": 1, "Nestle": 2.6, "Richemont": 1.3, "UBS": 1.6,
-        "Zurich": 1.9, "SwissRe": 0.9, "SwissLife": 1.5, "HelvetiaBaloise": 0.6,
-        "Roche": 1, "Novartis": 1.6, "Lonza": 2, "ABB": 1.3,
-        "Geberit": 1.6, "Givaudan": 2.1, "Holcim": 1.3, "Sika": 1.5,
-        "PORT": 1.3, "EWP": 2.2
+        "Swisscom": 1, "Nestle": 1.1, "Richemont": 1.3, "UBS": 1.6,
+        "Zurich": 1.1, "SwissRe": 0.9, "SwissLife": 1.5, "HelvetiaBaloise": 0.6,
+        "Roche": 1, "Novartis": 1.6, "Lonza": 1.3, "ABB": 1.3,
+        "Geberit": 1.4, "Givaudan": 1.5, "Holcim": 1.3, "Sika": 1.5,
+        "PORT": 1.3, "EWP": 1.6
     }
 
     # --- PLOT: Mean Excess Plot per tutti gli asset (Scelta della soglia) ---
@@ -158,21 +159,25 @@ def main():
     
     for ax, c in zip(axes, L.columns):
         losses_c = L[c].dropna().values
-        # Tagliamo a 98.5 per evitare il rumore estremo a destra come nei grafici del prof
-        thresholds = np.linspace(np.percentile(losses_c, 50), np.percentile(losses_c, 99.5), 60)
+        thresholds = np.linspace(np.percentile(losses_c, 50), np.percentile(losses_c, 99), 60)
         mean_excesses = []
         for th in thresholds:
             excesses = losses_c[losses_c > th] - th
             mean_excesses.append(excesses.mean() if len(excesses) > 0 else np.nan)
-            
         ax.plot(thresholds, mean_excesses, 'b.-', markersize=4)
-        
-        # Recuperiamo la soglia manuale u per questo asset (fallback 95% se non trovato)
-        u_val = manual_thresholds.get(c, np.percentile(losses_c, 95))
-        
-        ax.axvline(u_val, color='red', linestyle='--', linewidth=1.5, label=f'u = {u_val}')
-        ax.set_title(c, fontsize=9)
-        ax.legend(fontsize=8, loc='upper left')
+
+        u_val = manual_thresholds[c]                      # niente fallback silenzioso
+
+        # limiti di validità: u deve stare sotto il quantile (1-alpha) delle perdite
+        lim_5 = np.quantile(losses_c, 1 - max(ALPHAS))    # limite per il VaR 5% (il più stringente)
+        lim_1 = np.quantile(losses_c, 1 - min(ALPHAS))    # limite per il VaR 1%
+        ax.axvline(lim_5, color='black', linestyle=':', linewidth=1.3, label=f'limit 5% VaR ({lim_5:.2f})')
+        ax.axvline(lim_1, color='grey',  linestyle=':', linewidth=1.3, label=f'limit 1% VaR ({lim_1:.2f})')
+
+        ok = u_val < lim_5                                # soglia valida per tutti gli alpha?
+        ax.axvline(u_val, color='green' if ok else 'red', linestyle='--', linewidth=1.5, label=f'u = {u_val}')
+        ax.set_title(c + ("" if ok else "  (u > limit 5%)"), fontsize=9, color='black' if ok else 'red')
+        ax.legend(fontsize=6, loc='upper left')
         
     for ax in axes[len(L.columns):]: 
         ax.axis("off")
@@ -267,7 +272,6 @@ def main():
     
     for c in L.columns:
         fc_path = f"{FC_DIR}/{c}.csv"
-        import os
         if not os.path.exists(fc_path):
             continue  # Salta se la previsione per questo asset/EWP non esiste ancora
             
@@ -297,12 +301,15 @@ def main():
     summary_e7 = []
     for c in L.columns:
         fc = pd.read_csv(f"{FC_DIR}/{c}.csv", index_col=0, parse_dates=True)
-        summary_e7.append({
-            "Series": c,
-            "Avg_VaR_Normal_1%": fc["VaR_case1_0.01"].mean(),
-            "Avg_VaR_GEV_1%": fc["VaR_case4_0.01"].mean(),
-            "Avg_VaR_GPD_1%": fc["VaR_case5_0.01"].mean()
-        })
+        row = {"Series": c}
+        for a in ALPHAS:
+            s = f"{int(a*100)}%"
+            row[f"Avg_VaR_case1_{s}"] = fc[f"VaR_case1_{a}"].mean()
+            row[f"Avg_VaR_case3_{s}"] = fc[f"VaR_case3_{a}"].mean()
+            row[f"Avg_VaR_case4_{s}"] = fc[f"VaR_case4_{a}"].mean()
+            row[f"Avg_VaR_case5_{s}"] = fc[f"VaR_case5_{a}"].mean()
+        summary_e7.append(row)
+
     tab_e7 = pd.DataFrame(summary_e7).set_index("Series")
     print("\n=== E7 Average Out-of-Sample VaR (1%) ===")
     print(tab_e7.round(4).to_string())
@@ -330,5 +337,7 @@ def main():
 
     for a in ALPHAS:
         plot_var_grid(a)
+
+
 if __name__ == "__main__":
     main()
