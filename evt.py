@@ -55,7 +55,7 @@ def to_return_var(mu, sig, q_z):
     return mu + sig * q_z
 
 def main():
-    ds = pd.read_csv("data/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
+    ds = pd.read_csv("outputs/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
 
     #we remove the PORT from the dataset given that is not requested in the exercise
     ds = ds.drop(columns=["PORT"])
