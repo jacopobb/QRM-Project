@@ -235,7 +235,7 @@ def main():
         ax.set_title(c, fontsize=9)
         
     for ax in axes[len(L.columns):]: ax.axis("off")
-    fig.suptitle("Fig E6 - QQ-plot of GPD exceedances")
+    fig.suptitle("Fig E6.1 - QQ-plot of GPD exceedances")
     fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E6_gpd_qq.png", dpi=150)
     
@@ -334,11 +334,11 @@ def main():
     print(tab_e7.round(4).to_string())
     tab_e7.round(6).to_csv(f"{TABLE_DIR}/E7_avg_var_comparison.csv")
 
-    # 2. Plot della serie storica del VaR per il portafoglio (PORT)
-    # --- PLOT E7: rendimenti OOS e VaR (Casi 1, 3, 4, 5) per TUTTE le serie, una figura per livello alpha ---
+    # A) PLOT E7 (Grid All Series): rendimenti OOS e VaR per TUTTE le serie, una figura per livello alpha
     def plot_var_grid(a):
         n = len(L.columns); nc = 4; nr = int(np.ceil(n / nc))
-        fig, axes = plt.subplots(nr, nc, figsize=(nc * 5, nr * 3), sharex=True); axes = axes.ravel()
+        # Aggiunto un po' di spazio extra in basso nel figsize (da nr*3 a nr*3.2) per la legenda
+        fig, axes = plt.subplots(nr, nc, figsize=(nc * 5, nr * 3.2), sharex=True); axes = axes.ravel()
         for ax, c in zip(axes, L.columns):
             fc = pd.read_csv(f"{FC_DIR}/{c}.csv", index_col=0, parse_dates=True)
             ax.plot(fc.index, fc["ret"], color="lightgrey", lw=0.8, label="Returns")
@@ -347,12 +347,43 @@ def main():
             ax.plot(fc.index, fc[f"VaR_case4_{a}"], color="tab:orange", lw=1.0, ls="--", label="Case 4 (GEV, theta)")
             ax.plot(fc.index, fc[f"VaR_case5_{a}"], color="red",        lw=1.0, ls="-.", label="Case 5 (GPD)")
             ax.set_title(c, fontsize=9); ax.tick_params(labelsize=7)
+            
         for ax in axes[n:]: ax.axis("off")
+        
+        # Spostiamo la legenda in basso al centro (sotto i grafici)
         h, l = axes[0].get_legend_handles_labels()
-        fig.legend(h, l, loc="upper center", ncol=5, fontsize=9)
-        fig.suptitle(f"Fig E7 - OOS returns vs {int(a * 100)}% VaR, all series", y=1.0)
-        fig.tight_layout(rect=(0, 0, 1, 0.96))
+        fig.legend(h, l, loc="lower center", ncol=5, fontsize=10, bbox_to_anchor=(0.5, 0.01))
+        
+        # Aggiustiamo il layout per lasciare spazio alla legenda in basso
+        fig.suptitle(f"Fig E7a - OOS returns vs {int(a * 100)}% VaR, all series", y=0.98, fontsize=14)
+        fig.tight_layout(rect=(0, 0.05, 1, 0.96))
         fig.savefig(f"{FIG_DIR}/E7_VaR_OOS_all_{int(a * 100)}pct.png", dpi=150)
+
+    for a in ALPHAS:
+        plot_var_grid(a)
+
+    # B) PLOT E7 (Solo EWP Focus): Grafico grande e dettagliato solo per il portafoglio rappresentativo
+    for a in ALPHAS:
+        target = "EWP"
+        if os.path.exists(f"{FC_DIR}/{target}.csv"):
+            fc_target = pd.read_csv(f"{FC_DIR}/{target}.csv", index_col=0, parse_dates=True)
+            
+            fig, ax = plt.subplots(figsize=(10, 5))
+            
+            ax.plot(fc_target.index, fc_target["ret"], color="lightgrey", lw=1.5, label=f"{target} Returns")
+            ax.plot(fc_target.index, fc_target[f"VaR_case1_{a}"], color="blue",       lw=1.2, label="Case 1 (Normal)")
+            ax.plot(fc_target.index, fc_target[f"VaR_case3_{a}"], color="tab:green",  lw=2.0, label="Case 3 (GEV, no theta)")
+            ax.plot(fc_target.index, fc_target[f"VaR_case4_{a}"], color="tab:orange", lw=1.5, ls="--", label="Case 4 (GEV, theta)")
+            ax.plot(fc_target.index, fc_target[f"VaR_case5_{a}"], color="red",        lw=1.5, ls="-.", label="Case 5 (GPD)")
+            
+            ax.set_title(f"Fig E7b - Out-of-Sample {target} Returns vs {int(a * 100)}% VaR Models", fontsize=12)
+            ax.set_ylabel("Returns / VaR (%)", fontsize=10)
+            
+            # Legenda in basso a sinistra dentro il grafico, per non coprire le linee
+            ax.legend(fontsize=9, loc="lower left")
+            
+            fig.tight_layout()
+            fig.savefig(f"{FIG_DIR}/E7_VaR_OOS_{target}_{int(a * 100)}pct.png", dpi=150)
 
     for a in ALPHAS:
         plot_var_grid(a)
