@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import genextreme, genpareto, norm, kstest
+from statsmodels.tools.numdiff import approx_hess
 from settings import *
 import matplotlib.pyplot as plt
 import os
@@ -45,6 +46,7 @@ def fit_gpd(L, u):
     T = len(L)
     N_u = len(exc)
     return u, xi, beta, T, N_u
+
 
 def var_gpd(u, xi, beta, T, N_u, alpha):
     """Slide 72: q_alpha(F) = u + (beta/xi) * ((alpha / (N(u)/T))**(-xi) - 1)"""
@@ -106,16 +108,16 @@ def main():
     theta_tab = pd.DataFrame({f"theta_u{round(q * 100)}": {c: extremal_index(L[c].dropna(), q) for c in L.columns}
                               for q in (0.95, 0.99)})
     print("\n=== E5c extremal index ===\n", theta_tab.round(3).to_string()); theta_tab.round(6).to_csv(f"{TABLE_DIR}/E5c_extremal_index.csv")
-    theta = theta_tab["theta_u95"].clip(upper=1.0)       # used in the VaR; theta lives in (0,1] (slide 17): raw estimate > 1 = no clustering
+    theta_tab = theta_tab.clip(upper=1.0)       # used in the VaR; theta lives in (0,1] (slide 17): raw estimate > 1 = no clustering
 
     # 5) VaR of Z (loss quantile, positive number) at p = 1 - alpha, without and with theta  -> TABLE E5d
     rows = []
     for c in L.columns:
         for a in ALPHAS:
             p = 1 - a
-            rows.append({"series": c, "alpha": a, "theta": theta[c],
+            rows.append({"series": c, "alpha": a, "theta": theta_tab.loc[c,f"theta_u{round(p*100)}"],
                          "VaR_GEV_no_theta": var_gev(gev_params[c], p),
-                         "VaR_GEV_with_theta": var_gev(gev_params[c], p, theta=theta[c]),
+                         "VaR_GEV_with_theta": var_gev(gev_params[c], p, theta=theta_tab.loc[c,f"theta_u{round(p*100)}"]),
                          "VaR_empirical": np.quantile(L[c].dropna(), p),    # sanity check
                          "VaR_Normal": norm.ppf(p)})
     tab_d = pd.DataFrame(rows).set_index(["series", "alpha"])
@@ -198,7 +200,8 @@ def main():
         # 1. Recupero soglia e stima dei parametri GPD
         u_val = manual_thresholds.get(c, np.percentile(L[c].dropna(), 95)) 
         u, xi, beta, T_len, N_u = fit_gpd(L[c].dropna(), u=u_val)
-        
+         
+    
         gpd_params[c] = {"u": u, "xi": xi, "beta": beta, "T": T_len, "N_u": N_u}
         
         # 2. Calcolo del VaR per i livelli alpha richiesti
