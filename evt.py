@@ -47,6 +47,10 @@ def fit_gpd(L, u):
     N_u = len(exc)
     return u, xi, beta, T, N_u
 
+def LogLGPD(x, exc):                                     # prof's function, excesses passed as argument
+    beta, xi = np.exp(x[0]), np.exp(x[1])
+    return -(-len(exc) * np.log(beta) - (1 + 1/xi) * np.sum(np.log(1 + xi * exc / beta)))
+
 
 def var_gpd(u, xi, beta, T, N_u, alpha):
     """Slide 72: q_alpha(F) = u + (beta/xi) * ((alpha / (N(u)/T))**(-xi) - 1)"""
@@ -200,9 +204,15 @@ def main():
         # 1. Recupero soglia e stima dei parametri GPD
         u_val = manual_thresholds.get(c, np.percentile(L[c].dropna(), 95)) 
         u, xi, beta, T_len, N_u = fit_gpd(L[c].dropna(), u=u_val)
-         
-    
-        gpd_params[c] = {"u": u, "xi": xi, "beta": beta, "T": T_len, "N_u": N_u}
+        y = np.log([beta, xi])
+        exc = (L[c].dropna()[L[c].dropna() > u] - u).values 
+        H = np.linalg.inv(approx_hess(y, lambda x: LogLGPD(x, excesses))) 
+        G = np.diag(np.exp(y))
+        se_beta, se_xi = np.sqrt(np.diag(G @ H @ G))
+        z_beta, z_xi = beta / se_beta, xi / se_xi  
+
+
+        gpd_params[c] = {"u": u, "xi": xi,"z_xi": z_xi, "z_beta": z_beta, "beta": beta, "T": T_len, "N_u": N_u}
         
         # 2. Calcolo del VaR per i livelli alpha richiesti
         for a in ALPHAS:
