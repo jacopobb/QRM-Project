@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 pd.set_option("display.width", 220); pd.set_option("display.max_columns", 40)
 
 # ------------------------------------------------------------------ editable settings
-SAVE = False                                                   # True: write CSV and PNG files
+SAVE = True                                                   # True: write CSV and PNG files
 RET_NAMES = ["ret", "return", "returns", "r", "y"]            # accepted names of the realised-return column
 VAR_PATTERN = re.compile(r"^VaR_(.+)_(0?\.\d+)$")             # VaR_<model>_<alpha>
 LABELS = {"case1": "C1 Gaussian GARCH", "case2": "C2 GARCH alt. density", "case3": "C3 GARCH+GEV (indep.)",
