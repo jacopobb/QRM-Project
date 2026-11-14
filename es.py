@@ -31,6 +31,12 @@ Outputs (TABLES, in <out>/tables; FIGURES, in <out>/figures; ES series, in <out>
   S3_ES_check_by_series  same check, series by series
   Fig S1  returns, VaR and ES (focus series, one column per alpha)
   Fig S2  ES / VaR ratio, GPD against Gaussian, every series
+  Fig S3  returns, VaR and ES Case 5, every series (one figure per alpha)
+  Fig S4  realised minus forecast shortfall on violation days, every series, Case 5 against Case 1
+  Fig S5  ES - VaR spread over time (focus series), GPD against Gaussian
+  Fig S6  standardised ES residuals (r - ES)/sigma on violation days, pooled (mean 0 if the ES is right)
+  Fig S7  ES of Z, GPD against Gaussian, every series
+  Fig S8  return against forecast ES on violation days (focus series): points below the diagonal breach the ES
 """
 import os, re, glob, argparse, warnings
 import numpy as np, pandas as pd
@@ -205,6 +211,65 @@ def main():
         r = t.xs(a, level="alpha")["ES/VaR"].unstack("case"); r.plot(kind="bar", ax=ax, width=.8); ax.set_title(f"ES / VaR, alpha = {a:g}")
         ax.axhline(1, color="k", lw=.5); ax.tick_params(axis="x", labelsize=7); ax.set_ylim(.9, None)
     fig.suptitle("Fig S2 - ES/VaR ratio: GPD-based (case5) vs Gaussian (case1)"); fig.tight_layout(); fig.savefig(f"{FIG}/S2_ES_VaR_ratio.png", dpi=150)
+
+    # ---------- Fig S3: returns, VaR and ES Case 5 for every series, one figure per alpha
+    for a in alphas:
+        n = len(data); nc = 4; nr = int(np.ceil(n / nc))
+        fig, axes = plt.subplots(nr, nc, figsize=(nc * 5, nr * 3.2), sharex=True, squeeze=False); axes = axes.ravel()
+        for ax, (s, d) in zip(axes, data.items()):
+            ax.plot(d[RET], color="lightgrey", lw=.8, label="return"); ax.plot(d[f"VaR_case5_{a:g}"], "b", lw=1, label="VaR (Case 5)")
+            ax.plot(d[f"ES_case5_{a:g}"], "r", lw=1, label="ES (Case 5)"); ax.set_title(s, fontsize=9); ax.tick_params(labelsize=7)
+        for ax in axes[n:]: ax.axis("off")
+        h, l = axes[0].get_legend_handles_labels(); fig.legend(h, l, loc="lower center", ncol=3, fontsize=10)
+        fig.suptitle(f"Fig S3 - Returns, VaR and ES (Case 5), alpha = {a:g}, all series", y=.98); fig.tight_layout(rect=(0, .04, 1, .96))
+        fig.savefig(f"{FIG}/S3_ES_all_series_alpha_{a:g}.png", dpi=150)
+
+    # ---------- Fig S4: realised minus forecast ES on violation days (< 0: the ES is too small in absolute value)
+    fig, axes = plt.subplots(len(alphas), 1, figsize=(12, 3.8 * len(alphas)), squeeze=False)
+    for ax, a in zip(axes.ravel(), alphas):
+        t.xs(a, level="alpha")["gap_on_hits_%"].unstack("case")[["case5", "case1"]].plot(kind="bar", ax=ax, width=.8)
+        ax.axhline(0, color="k", lw=.7); ax.set_ylabel("% points"); ax.set_title(f"alpha = {a:g}"); ax.tick_params(axis="x", labelsize=7)
+    fig.suptitle("Fig S4 - Mean return minus mean forecast ES on violation days"); fig.tight_layout(); fig.savefig(f"{FIG}/S4_ES_gap_on_hits.png", dpi=150)
+
+    # ---------- Fig S5: ES - VaR spread over time, focus series (how much deeper the tail is beyond the VaR)
+    fig, axes = plt.subplots(len(focus), len(alphas), figsize=(7 * len(alphas), 3.5 * len(focus)), squeeze=False)
+    for i, s in enumerate(focus):
+        d = data[s]
+        for j, a in enumerate(alphas):
+            ax = axes[i, j]
+            ax.plot(d[f"ES_case5_{a:g}"] - d[f"VaR_case5_{a:g}"], "r", lw=1.2, label="ES - VaR, GPD (Case 5)")
+            ax.plot(d[f"ES_case1_{a:g}"] - d[f"VaR_case1_{a:g}"], "g--", lw=1, label="ES - VaR, Gaussian (Case 1)")
+            ax.axhline(0, color="k", lw=.5); ax.set_title(f"{s} - alpha = {a:g}"); ax.set_ylabel("% points"); ax.legend(fontsize=7)
+    fig.suptitle("Fig S5 - Distance between ES and VaR over time"); fig.tight_layout(); fig.savefig(f"{FIG}/S5_ES_VaR_spread.png", dpi=150)
+
+    # ---------- Fig S6: pooled standardised ES residuals on violation days
+    fig, axes = plt.subplots(len(alphas), 2, figsize=(11, 3.6 * len(alphas)), squeeze=False)
+    for i, a in enumerate(alphas):
+        for j, case in enumerate(("case5", "case1")):
+            x = np.concatenate([resid[(case, a, s)] for s in data]); ax = axes[i, j]
+            ax.hist(x, bins=20, color="steelblue", edgecolor="black", alpha=.7)
+            ax.axvline(0, color="k", lw=1); ax.axvline(x.mean() if len(x) else 0, color="r", ls="--", lw=1.3, label=f"mean {x.mean():.2f}" if len(x) else "")
+            ax.set_title(f"{case} - alpha = {a:g} (n = {len(x)})"); ax.legend(fontsize=8)
+    fig.suptitle("Fig S6 - (return - ES)/sigma on violation days, all series pooled"); fig.tight_layout(); fig.savefig(f"{FIG}/S6_ES_residuals_hist.png", dpi=150)
+
+    # ---------- Fig S7: ES of the standardised residuals, GPD vs Gaussian
+    fig, axes = plt.subplots(1, len(alphas), figsize=(6.5 * len(alphas), 4), squeeze=False)
+    for ax, a in zip(axes.ravel(), alphas):
+        t0.xs(a, level="alpha")[["ES_Z_GPD", "ES_Z_Gauss"]].plot(kind="bar", ax=ax, width=.8)
+        ax.set_title(f"ES of Z, alpha = {a:g}"); ax.tick_params(axis="x", labelsize=7)
+    fig.suptitle("Fig S7 - Expected Shortfall of the standardised residuals: GPD vs Gaussian"); fig.tight_layout(); fig.savefig(f"{FIG}/S7_ES_Z_gpd_vs_gauss.png", dpi=150)
+
+    # ---------- Fig S8: return vs forecast ES (Case 5) on violation days; below the diagonal = ES breached
+    fig, axes = plt.subplots(len(focus), len(alphas), figsize=(6 * len(alphas), 4.5 * len(focus)), squeeze=False)
+    for i, s in enumerate(focus):
+        d = data[s]
+        for j, a in enumerate(alphas):
+            ax = axes[i, j]; h = d[RET] < d[f"VaR_case5_{a:g}"]; x, y = d[f"ES_case5_{a:g}"][h], d[RET][h]
+            ax.scatter(x, y, s=18, color="k")
+            lim = [min(x.min(), y.min()) - .2, max(x.max(), y.max()) + .2] if h.any() else [-1, 0]
+            ax.plot(lim, lim, "r-", lw=1, label="return = ES"); ax.set_xlabel("forecast ES (%)"); ax.set_ylabel("return (%)")
+            ax.set_title(f"{s} - alpha = {a:g}: {int((y < x).sum())} of {int(h.sum())} violations below ES"); ax.legend(fontsize=7)
+    fig.suptitle("Fig S8 - Return against forecast ES on VaR violation days (Case 5)"); fig.tight_layout(); fig.savefig(f"{FIG}/S8_ES_scatter_on_hits.png", dpi=150)
     plt.show()
 
 
