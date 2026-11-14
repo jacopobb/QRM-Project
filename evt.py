@@ -61,10 +61,7 @@ def to_return_var(mu, sig, q_z):
     return mu + sig * q_z
 
 def main():
-    ds = pd.read_csv("outputs/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
-
-    #we remove the PORT from the dataset given that is not requested in the exercise
-    ds = ds.drop(columns=["PORT"])
+    ds = pd.read_csv("data/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
 
     #We need to take in cosideration the in sample resiuals and turn them into losses:
     
@@ -77,8 +74,8 @@ def main():
     #we create a dictionary to store the GEV parameters for each asset
     gev_params, rows = {}, {}
 
-    # we iter for each tiker and the last EWP to get the GEV parameters 
-    # for each asset and the EWP
+    # we iter for each tiker and the last PORT to get the GEV parameters 
+    # for each asset and the PORT
 
     for c in L.columns:
         maxima = block_maxima(L[c])
@@ -89,8 +86,8 @@ def main():
     print("\n=== E5a GEV parameters ===\n", tab_a.round(4).to_string()); tab_a.round(6).to_csv(f"{TABLE_DIR}/E5a_gev_parameters.csv")
 
 
-    #now we have to detemine the quality of the fit for each asset e EWP:
-
+    #now we have to detemine the quality of the fit for each asset e PORT:
+    #EWP
     #under correct specification the residuals from the block maxima should
     # follow a exponential random variable with unit parameter.
     # we can see this by plotting the QQ plot so theoretical quantiles vs the observed
@@ -103,7 +100,7 @@ def main():
         ax.scatter(theo, t, s=6); ax.plot([0, theo.max()], [0, theo.max()], "r-"); ax.set_title(c, fontsize=9)
         rows[c] = {"resid_mean": t.mean(), "resid_std": t.std(ddof=1), "KS_p": kstest(t, "expon").pvalue}
     for ax in axes[len(L.columns):]: ax.axis("off")
-    fig.suptitle("Fig E5 - QQ-plot of GEV residuals vs Exp(1)"); fig.tight_layout()
+    fig.suptitle("Fig F6.1 - QQ-plot of GEV residuals vs Exp(1)"); fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E5_gev_residual_qq.png", dpi=150)
     tab_b = pd.DataFrame(rows).T                       # KS p-value approximate: GEV parameters are estimated
     print("\n=== E5b fit quality (expected: mean 1, std 1, KS_p > 0.05) ===\n", tab_b.round(4).to_string()); tab_b.round(6).to_csv(f"{TABLE_DIR}/E5b_gev_fit_quality.csv")
@@ -146,7 +143,7 @@ def main():
         ax.legend(fontsize=8)
         
     for ax in axes[len(L.columns):]: ax.axis("off")
-    fig.suptitle("Fig E5 - Histogram of Block Maxima with Fitted GEV Density")
+    fig.suptitle("Fig F6 - Histogram of Block Maxima with Fitted GEV Density")
     fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E5_gev_histograms.png", dpi=150)
 
@@ -160,7 +157,7 @@ def main():
         "Zurich": 1.1, "SwissRe": 0.9, "SwissLife": 1.5, "HelvetiaBaloise": 0.6,
         "Roche": 1, "Novartis": 1.6, "Lonza": 1.3, "ABB": 1.3,
         "Geberit": 1.4, "Givaudan": 1.5, "Holcim": 1.3, "Sika": 1.5,
-        "PORT": 1.3, "EWP": 1.6
+        "PORT": 1.3, "PORT": 1.4
     }
 
     # --- PLOT: Mean Excess Plot per tutti gli asset (Scelta della soglia) ---
@@ -192,7 +189,7 @@ def main():
     for ax in axes[len(L.columns):]: 
         ax.axis("off")
         
-    fig.suptitle("Fig E6a - Mean Excess Plots (Manual Threshold Selection)")
+    fig.suptitle("Fig E6.2 - Mean Excess Plots (Manual Threshold Selection)")
     fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E6a_mean_excess_plots.png", dpi=150)
 
@@ -248,7 +245,7 @@ def main():
         ax.set_title(c, fontsize=9)
         
     for ax in axes[len(L.columns):]: ax.axis("off")
-    fig.suptitle("Fig E6.1 - QQ-plot of GPD exceedances")
+    fig.suptitle("Fig F6.4 - QQ-plot of GPD exceedances")
     fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E6_gpd_qq.png", dpi=150)
     
@@ -275,7 +272,7 @@ def main():
         ax.legend(fontsize=8)
         
     for ax in axes[len(L.columns):]: ax.axis("off")
-    fig.suptitle("Fig E6 - Histogram of Exceedances with Fitted GPD Density")
+    fig.suptitle("Fig F6.3 - Histogram of Exceedances with Fitted GPD Density")
     fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/E6_gpd_histograms.png", dpi=150)
     
@@ -305,7 +302,7 @@ def main():
     for c in L.columns:
         fc_path = f"{FC_DIR}/{c}.csv"
         if not os.path.exists(fc_path):
-            continue  # Salta se la previsione per questo asset/EWP non esiste ancora
+            continue  # Salta se la previsione per questo asset/PORT non esiste ancora
             
         # Carichiamo le previsioni del modello GARCH per il titolo
         fc = pd.read_csv(fc_path, index_col=0, parse_dates=True)
@@ -377,7 +374,7 @@ def main():
 
     # B) PLOT E7 (Solo EWP Focus): Grafico grande e dettagliato solo per il portafoglio rappresentativo
     for a in ALPHAS:
-        target = "EWP"
+        target = "PORT"
         if os.path.exists(f"{FC_DIR}/{target}.csv"):
             fc_target = pd.read_csv(f"{FC_DIR}/{target}.csv", index_col=0, parse_dates=True)
             
