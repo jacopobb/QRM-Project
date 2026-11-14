@@ -136,30 +136,37 @@ def density_asymmetry_check(r, orders_pre, orders, best):
             rows[(c, stage)] = row
     return pd.DataFrame(list(rows.values()), index=pd.MultiIndex.from_tuples(rows.keys(), names=["series", "stage"]))
 
+def implausible(params, vol):
+    """Economically implausible fit: persistence >= 1, a large negative shock lowering volatility (EGARCH), t/skew-t nu at its bound."""
+    a, g, b = (params.filter(regex=rf"^{k}\[\d+\]$").sum() for k in ("alpha", "gamma", "beta"))
+    if vol == "EGARCH":
+        bad = abs(b) >= 1 or a - g <= 0                      
+    elif vol == "APARCH":
+        bad = b >= 1 
+    else:                                        
+        bad = a + b + 0.5 * g >= 1                           
+    nu = params.get("nu", params.get("eta", np.inf))
+    return bool(bad or nu <= 2.1)                             
+
 def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, window=W_ROLL, alphas=ALPHAS):
     """One-step-ahead mu, sigma and quantiles q_alpha per OOS day; refit every h days on the last `window` days."""
     oos = r.index[r.index > IN_SAMPLE_END]
     step = h if h else len(oos)
-    out, prev = [], None                                                               # prev = previous block's fit
+    out, prev = [], None
     for s in range(0, len(oos), step):
         block = oos[s:s + step]
-        train = r[r.index < block[0]]                                                  # data up to the day before the block
-        if window: train = train.iloc[-window:]                                        # rolling: only the last `window` days
-        mod = spec(train, dist, o, p, q, vol)
-        res = mod.fit(disp="off")
-        if prev is not None:                                                           # warm start from the previous block,
-            res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-            if res_w.loglikelihood > res.loglikelihood: res = res_w
-        data = r.loc[:block[-1]].iloc[-(len(train) + len(block)):]                     # same window as the estimation + block
-        sigma = lambda fit: spec(data, dist, o, p, q, vol).fix(fit.params.values).conditional_volatility.loc[block]
-        sig = sigma(res)                                                               # sigma_t uses returns up to t-1 only
-        sd = train.std()
-        if prev is not None and not (0.25 * sd < sig.min() and sig.max() < 5 * sd):    # degenerate fit: keep previous parameters
-            print(f"  {r.name} {vol} {dist} block {block[0].date()}: implausible sigma, previous parameters kept")
-            res = prev; sig = sigma(res)
+        train = r[r.index < block[0]]                                                  
+        if window: train = train.iloc[-window:]                                        
+        res = spec(train, dist, o, p, q, vol).fit(disp="off")
+        if prev is not None and implausible(res.params, vol):                          
+            print(f"  {r.name} {vol} {dist} block {block[0].date()}: implausible parameters, previous parameters kept")
+            res = prev
         prev = res
+        filt = spec(r.loc[train.index[0]:block[-1]], dist, o, p, q, vol).fix(res.params.values)  
+        sig = filt.conditional_volatility.loc[block]                                   
         k = res.model.distribution.num_params
-        q_a = norm.ppf(alphas) if dist == "normal" else res.model.distribution.ppf(np.array(alphas), res.params.iloc[-k:].values)
+        if dist == "normal": q_a = norm.ppf(alphas)
+        else: q_a = res.model.distribution.ppf(np.array(alphas), res.params.iloc[-k:].values)   
         df = pd.DataFrame({"mu": res.params["mu"], "sigma": sig})
         for a, qa in zip(alphas, q_a): df[f"q_{a}"] = qa
         out.append(df)
@@ -181,9 +188,7 @@ if __name__ == "__main__":
     w.index = list(STOCKS.keys())
     print(w.round(4))
     w.to_csv("outputs/tables/G0_portfolio_weights.csv")
-    r_ewp = data_prep.equal_weighted_portfolio(r)                      
     r["PORT"] = data_prep.port_returns(r, w)
-    r["EWP"] = r_ewp
 
 
     #initialization point 3

@@ -51,6 +51,17 @@ def LogLGPD(x, exc):                                     # prof's function, exce
     beta, xi = np.exp(x[0]), np.exp(x[1])
     return -(-len(exc) * np.log(beta) - (1 + 1/xi) * np.sum(np.log(1 + xi * exc / beta)))
 
+def shape_check(L, gev_params, gpd_params):
+    """GPD shape vs GEV shape for every series ; flag = |difference| > tol."""
+    rows = {}
+    for c in L.columns:
+        u = gpd_params[c]["u"]
+        rows[c] = {"u": u, "pct_u": 100 * (L[c].dropna() <= u).mean(),      
+                   "xi_GEV": -gev_params[c][0],                              
+                   "xi_GPD": gpd_params[c]["xi"]}
+    tab = pd.DataFrame(rows).T
+    tab["diff"] = tab["xi_GPD"] - tab["xi_GEV"]                                   
+    return tab
 
 def var_gpd(u, xi, beta, T, N_u, alpha):
     """Slide 72: q_alpha(F) = u + (beta/xi) * ((alpha / (N(u)/T))**(-xi) - 1)"""
@@ -61,7 +72,7 @@ def to_return_var(mu, sig, q_z):
     return mu + sig * q_z
 
 def main():
-    ds = pd.read_csv("data/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
+    ds = pd.read_csv("outputs/Z_insample.csv", index_col=0, parse_dates=True).sort_index()
 
     #We need to take in cosideration the in sample resiuals and turn them into losses:
     
@@ -197,22 +208,66 @@ def main():
     gpd_params = {}
     rows_gpd = []
 
+#--- FIT GPD WITH MANUAL THRESHOLDS ---
     for c in L.columns:
         # 1. Recupero soglia e stima dei parametri GPD
         u_val = manual_thresholds.get(c, np.percentile(L[c].dropna(), 95)) 
         u, xi, beta, T_len, N_u = fit_gpd(L[c].dropna(), u=u_val)
         y = np.log([beta, xi])
         exc = (L[c].dropna()[L[c].dropna() > u] - u).values 
-        H = np.linalg.inv(approx_hess(y, lambda x: LogLGPD(x, excesses))) 
+        H = np.linalg.inv(approx_hess(y, lambda x: LogLGPD(x, exc))) 
         G = np.diag(np.exp(y))
         se_beta, se_xi = np.sqrt(np.diag(G @ H @ G))
         z_beta, z_xi = beta / se_beta, xi / se_xi  
 
 
         gpd_params[c] = {"u": u, "xi": xi,"z_xi": z_xi, "z_beta": z_beta, "beta": beta, "T": T_len, "N_u": N_u}
-        
-        # 2. Calcolo del VaR per i livelli alpha richiesti
+
+#--------------------------------------THRESHOLD SENSITIVITY ANALYSIS (E6d)--------------------------------------
+    shape_chk = shape_check(L, gev_params, gpd_params)
+    print("\n=== E6c shape check: GPD vs GEV ===\n", shape_chk.round(3).to_string())
+    shape_chk.round(6).to_csv(f"{TABLE_DIR}/E6c_shape_check.csv")
+    
+    CHECK = ["UBS", "SwissLife", "Geberit"] #MOST SENSITIVE SERIES (from E6c shape check)
+    rows_sens = []
+    for c in CHECK: #
+        losses = L[c].dropna()
+        for q in (0.85, 0.875, 0.90, 0.925, 0.95):
+            u_q = np.quantile(losses, q)                                 
+            u, xi, beta, T_len, N_u = fit_gpd(losses, u=u_q)
+            rows_sens.append({"series": c, "pct": q, "u": u, "N_u": N_u, "xi_GPD": xi,
+                              "diff_vs_GEV": xi + gev_params[c][0],     
+                              "VaR_Z_1%": var_gpd(u, xi, beta, T_len, N_u, alpha=0.01)})
+    tab_sens = pd.DataFrame(rows_sens).set_index(["series", "pct"])
+    print("\n=== E6d threshold sensitivity (selected series) ===\n", tab_sens.round(3).to_string())
+    tab_sens.round(6).to_csv(f"{TABLE_DIR}/E6d_threshold_sensitivity.csv")
+
+    #replicates the already done GPD fits with the new thresholds (the one with the smallest |xi_GPD - xi_GEV|) for the most sensitive series
+    for c in CHECK: 
+        best = tab_sens.loc[c, "diff_vs_GEV"].abs().idxmin()             
+        losses = L[c].dropna()
+        u, xi, beta, T_len, N_u = fit_gpd(losses, u=tab_sens.loc[(c, best), "u"])
+        y = np.log([beta, xi])                                          
+        exc = (losses[losses > u] - u).values
+        H = np.linalg.inv(approx_hess(y, lambda x: LogLGPD(x, exc)))
+        G = np.diag(np.exp(y))
+        se_beta, se_xi = np.sqrt(np.diag(G @ H @ G))
+        gpd_params[c] = {"u": u, "xi": xi, "z_xi": xi / se_xi, "z_beta": beta / se_beta,
+                         "beta": beta, "T": T_len, "N_u": N_u}           
+        print(f"  {c}: threshold set to the {best:.1%} percentile (u = {u:.2f}, xi = {xi:.3f})")
+
+    #final check
+    shape_chk = shape_check(L, gev_params, gpd_params)                  
+    print("\n=== E6c shape check: GPD vs GEV ===\n", shape_chk.round(3).to_string())
+    shape_chk.round(6).to_csv(f"{TABLE_DIR}/E6c_shape_check.csv")
+
+# EVENTUALLY REPEAT THE MEF FIGURE WITH THE NEW THRESHOLDS (E6a) AND THE HISTOGRAMS  FOR THE MOST SENSITIVE SERIES
+#-------------------------------------------------------------------------------------------------------------------
+   
+    # --- CALCOLO VaR GPD CON SOGLIE AGGIORNATE --
+    for c in L.columns:    
         for a in ALPHAS:
+            u,xi,beta,T_len,N_u = gpd_params[c]["u"], gpd_params[c]["xi"], gpd_params[c]["beta"], gpd_params[c]["T"], gpd_params[c]["N_u"]
             var_g = var_gpd(u, xi, beta, T_len, N_u, alpha=a)
             var_emp = np.quantile(L[c].dropna(), 1 - a)
             var_norm = norm.ppf(1 - a)
