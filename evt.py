@@ -156,7 +156,7 @@ def main():
         "Zurich": 1.1, "SwissRe": 0.9, "SwissLife": 1.5, "HelvetiaBaloise": 0.6,
         "Roche": 1, "Novartis": 1.6, "Lonza": 1.3, "ABB": 1.3,
         "Geberit": 1.4, "Givaudan": 1.5, "Holcim": 1.3, "Sika": 1.5,
-        "PORT": 1.3, "PORT": 1.4
+        "PORT": 1.4
     }
 
     # --- PLOT: Mean Excess Plots for All Assets (Threshold Selection) ---
