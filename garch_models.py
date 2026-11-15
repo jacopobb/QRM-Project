@@ -1,5 +1,5 @@
 """Points 3-4 - GARCH estimation, static one-step-ahead forecasts, Gaussian VaR."""
-import os
+import os, re
 import numpy as np, pandas as pd
 import matplotlib.pyplot as plt
 from arch import arch_model
@@ -8,6 +8,8 @@ from statsmodels.stats.diagnostic import acorr_ljungbox, het_arch
 import statsmodels.api as sm
 from scipy import stats
 from scipy.stats import chi2, norm
+from scipy.integrate import quad
+from scipy.optimize import brentq
 try:
     from settings import *
 except ModuleNotFoundError:
@@ -23,11 +25,22 @@ def fit_in_sample(r, dist="normal", o=0, p=1, q=1, vol="GARCH"):
     """Fits the model on the in-sample period only (up to IN_SAMPLE_END)."""
     return spec(r.loc[:IN_SAMPLE_END], dist, o, p, q, vol).fit(disp="off")    # in-sample cut here
 
+def persistence(params, vol):
+    """Persistence: alpha+beta+gamma/2 (GARCH/GJR), beta (EGARCH), alpha*E(|Z|-gamma*Z)^delta + beta (APARCH, Z ~ N(0,1))."""
+    a, g, b = (params.filter(regex=rf"^{k}\[\d+\]$").sum() for k in ("alpha", "gamma", "beta"))
+    if vol == "EGARCH": return b
+    if vol == "APARCH":
+        d = params["delta"]
+        kappa = quad(lambda z: (abs(z) - g * z) ** d * norm.pdf(z), -np.inf, np.inf)[0]   # E(|Z|-gamma*Z)^delta
+        return a * kappa + b
+    return a + b + 0.5 * g                                              # GARCH and GJR-GARCH
+
 def param_tables(table, series, res):
-    """Writes every estimated parameter with its p-value, BIC, AIC and log-likelihood """
-    for name in res.params.index:                                    
+    """Writes every estimated parameter with its p-value, persistence, BIC, AIC and log-likelihood """
+    for name in res.params.index:
         table.loc[series, name] = res.params[name]
         table.loc[series, f"{name}_p"] = res.pvalues[name]
+    table.loc[series, "persistence"] = persistence(res.params, res.model.volatility.name)
     table.loc[series, "BIC"] = res.bic
     table.loc[series, "AIC"] = res.aic
     table.loc[series, "MLL"] = res.loglikelihood
@@ -148,6 +161,8 @@ def implausible(params, vol):
     nu = params.get("nu", params.get("eta", np.inf))
     return bool(bad or nu <= 2.1)                             
 
+IMPLAUSIBLE_LOG = []                                                 # blocks rejected by implausible() -> TABLE G6
+
 def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, window=W_ROLL, alphas=ALPHAS):
     """One-step-ahead mu, sigma and quantiles q_alpha per OOS day; refit every h days on the last `window` days."""
     oos = r.index[r.index > IN_SAMPLE_END]
@@ -155,11 +170,16 @@ def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, windo
     out, prev = [], None
     for s in range(0, len(oos), step):
         block = oos[s:s + step]
-        train = r[r.index < block[0]]                                                  
-        if window: train = train.iloc[-window:]                                        
+        train = r[r.index < block[0]]
+        if window: train = train.iloc[-window:]
         res = spec(train, dist, o, p, q, vol).fit(disp="off")
-        if prev is not None and implausible(res.params, vol):                          
+        if prev is not None and implausible(res.params, vol):
             print(f"  {r.name} {vol} {dist} block {block[0].date()}: implausible parameters, previous parameters kept")
+            vname = res.model.volatility.name                                          # record what was rejected and what was kept
+            IMPLAUSIBLE_LOG.append({"series": r.name, "model": f"{vname}({p},{o},{q})", "dist": dist, "block_start": block[0].date(),
+                                    "persistence_rejected": persistence(res.params, vname),
+                                    "persistence_kept": persistence(prev.params, vname),
+                                    "params_rejected": res.params.round(4).to_dict(), "params_kept": prev.params.round(4).to_dict()})
             res = prev
         prev = res
         filt = spec(r.loc[train.index[0]:block[-1]], dist, o, p, q, vol).fix(res.params.values)  
@@ -175,6 +195,75 @@ def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, windo
 def var_from_forecasts(fc, alphas=ALPHAS):
     """VaR = mu + sigma * q_alpha (return quantile, negative number)."""
     return pd.DataFrame({a: fc["mu"] + fc["sigma"] * fc[f"q_{a}"] for a in alphas})
+
+# ---- report tables: the tables of report Sections 4-5, already formatted (copy-paste into Word)
+NAMES = {"Nestle": "Nestlé", "SwissRe": "Swiss Re", "SwissLife": "Swiss Life", "HelvetiaBaloise": "Helvetia Baloise"}
+LABEL = {"GARCH(1,0,1)": "GARCH(1,1)", "GJR-GARCH(1,1,1)": "GJR(1,1)", "GJR-GARCH(1,2,1)": "GJR(1,2,1)",
+         "EGARCH(1,1,1)": "EGARCH(1,1)", "APARCH(1,1,1)": "APARCH(1,1)"}
+nm = lambda s: NAMES.get(s, s)
+pv = lambda x: "<0.001" if x < 0.001 else f"{x:.3f}"                 # p-value as printed in the report
+cp = lambda c, p: "–" if pd.isna(c) else f"{c:.3f} ({pv(p)})"        # "coefficient (p-value)"
+
+def report_tables(w, candidates, models, Z_diag, z_norm, ic, best, summary, out="outputs/tables/report"):
+    """Writes Tables 4.1-4.4 and 5.1-5.3 of the report exactly as they appear in Word."""
+    os.makedirs(out, exist_ok=True)
+    # Table 4.1 - weights of PORT and of the stocks in the index
+    t = pd.DataFrame({"Stock": [nm(s) for s in w.index], "PORT weight (%)": (w * 100).values,
+                      "Index weight (%)": [INDEX_WEIGHT[s] for s in w.index]}).sort_values("PORT weight (%)", ascending=False)
+    t.loc[len(t)] = ["Total", t["PORT weight (%)"].sum(), t["Index weight (%)"].sum()]
+    for col in ["PORT weight (%)", "Index weight (%)"]: t[col] = t[col].map(lambda x: f"{x:.2f}")
+    t.to_csv(f"{out}/Table_4_1_weights.csv", index=False)
+    # Table 4.2 - model selection: candidates, chosen model, gamma, Delta BIC vs GARCH(1,1), joint test before/after
+    rows = []
+    for s, c in candidates.groupby(level="series", sort=False):
+        c = c.droplevel("series"); base, ch = c.loc["GARCH(1,0,1)"], c[c["chosen"]].iloc[0]; chm = c.index[c["chosen"]][0]
+        rows.append({"Series": nm(s), "Joint p GARCH(1,1)": pv(base["joint_p"]),
+                     "Candidates estimated": ", ".join(LABEL[m] for m in c.index if m != "GARCH(1,0,1)") or "–",
+                     "Chosen model": LABEL[chm], "γ (p-value)": cp(ch["gamma"], ch["gamma_p"]),
+                     "ΔBIC vs GARCH(1,1)": "–" if chm == "GARCH(1,0,1)" else f"{ch['BIC'] - base['BIC']:.1f}",
+                     "Joint p chosen": pv(ch["joint_p"])})
+    pd.DataFrame(rows).to_csv(f"{out}/Table_4_2_model_selection.csv", index=False)
+    # Table 4.3 - in-sample estimates "coefficient (p-value)" and persistence
+    chosen = candidates[candidates["chosen"]].reset_index(level="model")["model"]
+    t = pd.DataFrame({"Series": [nm(s) for s in models.index], "Model": [LABEL[chosen[s]] for s in models.index]})
+    for col, k in [("μ", "mu"), ("ω", "omega"), ("α", "alpha[1]"), ("β", "beta[1]"), ("γ", "gamma[1]"), ("δ", "delta")]:
+        t[col] = [cp(models.loc[s].get(k, np.nan), models.loc[s].get(f"{k}_p", np.nan)) for s in models.index]
+    t["Persist."] = models["persistence"].map(lambda x: f"{x:.3f}").values
+    t.to_csv(f"{out}/Table_4_3_parameters.csv", index=False)
+    # Table 4.4 - diagnostics on Z (p-values)
+    t = pd.DataFrame({"Series": [nm(s) for s in Z_diag.index], "Model": Z_diag["model"].str.replace("GJR-GARCH", "GJR").values,
+                      "ACF1 Z": Z_diag["ACF1_Z"].map(lambda x: f"{x:.3f}").values})
+    for col, k in [("LB(10) Z", "LB10_Z_p"), ("LB(10) Z²", "LB10_Z2_p"), ("ARCH-LM(10)", "ARCH_LM10_p"), ("Sign bias", "sign_bias_p"),
+                   ("Neg. size", "neg_size_bias_p"), ("Pos. size", "pos_size_bias_p"), ("Joint", "joint_p")]:
+        t[col] = Z_diag[k].map(pv).values
+    t.to_csv(f"{out}/Table_4_4_Z_diagnostics.csv", index=False)
+    # Table 5.1 - moments and normality tests of Z
+    t = pd.DataFrame({"Series": [nm(s) for s in z_norm.index], "Model": Z_diag.loc[z_norm.index, "model"].str.replace("GJR-GARCH", "GJR").values,
+                      "Skewness": z_norm["skew"].astype(float).map(lambda x: f"{x:.2f}").values,
+                      "Excess kurtosis": z_norm["ex_kurt"].astype(float).map(lambda x: f"{x:.2f}").values,
+                      "Jarque–Bera p": z_norm["JB_p"].astype(float).map(pv).values, "KS vs N(0,1) p": z_norm["KS_norm_p"].astype(float).map(pv).values})
+    t.to_csv(f"{out}/Table_5_1_Z_normality.csv", index=False)
+    # Table 5.2 - BIC under four densities, chosen density, nu of the t and lambda of the skew-t
+    b = ic["BIC"].unstack("dist").reindex(best.index); sh = ic["shape"]          # keep the order of the series
+    t = pd.DataFrame({"Series": [nm(s) for s in b.index]})
+    for col, d in [("BIC Normal", "normal"), ("BIC t", "t"), ("BIC skew-t", "skewt"), ("BIC GED", "ged")]: t[col] = b[d].round(0).astype(int).values
+    t["Chosen"] = best.loc[b.index].str.replace("skewt", "skew-t").values
+    t["ν (t)"] = [re.search(r"nu=([\d.]+)", sh[(s, "t")]).group(1) for s in b.index]
+    t["λ skew-t (p)"] = [re.search(r"lambda=(-?[\d.]+) \(p=([\d.]+)\)", sh[(s, "skewt")]).expand(r"\1 (\2)") for s in b.index]
+    t.to_csv(f"{out}/Table_5_2_densities.csv", index=False)
+    # Table 5.3 - out-of-sample VaR Case 1 vs Case 2: average VaR and violations
+    g = pd.DataFrame(summary); rows = []
+    for s in dict.fromkeys(g["series"]):
+        r5, r1 = (g[(g.series == s) & (g.alpha == a)].iloc[0] for a in (0.05, 0.01))
+        rows.append({"Series": nm(s), "Density": r5.case2_dist.replace("skewt", "skew-t"),
+                     "5%: avg VaR C1": f"{r5.avg_VaR_case1:.2f}", "5%: avg VaR C2": f"{r5.avg_VaR_case2:.2f}",
+                     "5%: viol. C1 / C2": f"{r5.hits_case1} / {r5.hits_case2}",
+                     "1%: avg VaR C1": f"{r1.avg_VaR_case1:.2f}", "1%: avg VaR C2": f"{r1.avg_VaR_case2:.2f}",
+                     "1%: viol. C1 / C2": f"{r1.hits_case1} / {r1.hits_case2}"})
+    tot = {a: g[g.alpha == a][["hits_case1", "hits_case2"]].sum() for a in (0.05, 0.01)}
+    rows.append({"Series": "Total", "5%: viol. C1 / C2": f"{tot[0.05].hits_case1} / {tot[0.05].hits_case2}",
+                 "1%: viol. C1 / C2": f"{tot[0.01].hits_case1} / {tot[0.01].hits_case2}"})
+    pd.DataFrame(rows).fillna("").to_csv(f"{out}/Table_5_3_var_case1_case2.csv", index=False)
 
 if __name__ == "__main__":
     # remove the tables written by older versions of this script (no longer produced)
@@ -299,3 +388,35 @@ if __name__ == "__main__":
         ax.set_title(c); ax.legend(fontsize=7, ncol=5)
     fig.suptitle("Fig G3 - Out-of-sample returns and VaR, Case 1 vs Case 2"); fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/G3_var_case1_case2.png", dpi=150)
+
+    # Fig G4: Normal vs unit-variance Student-t, 5% and 1% quantiles (why Case 2 is less conservative at 5% and more at 1%)
+    SHOW_T = "Swisscom"                                              # a Student-t series with more Case 2 violations at 5%
+    vol, p, o, q = orders[SHOW_T]
+    nu = fit_in_sample(r[SHOW_T], "t", o=o, p=p, q=q, vol=vol).params["nu"]   # in-sample nu (Table G4)
+    from arch.univariate import StudentsT
+    q_n, q_t = norm.ppf(ALPHAS), StudentsT().ppf(np.array(ALPHAS), [nu])     # unit-variance t, as in oos_forecasts
+    s = np.sqrt((nu - 2) / nu)                                                  # rescales the classic t to variance 1
+    x_cross = brentq(lambda x: norm.cdf(x) - stats.t.cdf(x / s, nu), -4, -1.2)  # point where the two left tails are equal
+    f = pd.read_csv(f"{FC_DIR}/{SHOW_T}.csv", index_col=0, parse_dates=True)
+    only2 = ((f["ret"] < f["VaR_case2_0.05"]) & (f["ret"] >= f["VaR_case1_0.05"])).sum()
+    print(f"\n{SHOW_T}: nu = {nu:.2f}; quantiles Normal {q_n.round(3)}, t {q_t.round(3)}; crossing at {x_cross:.3f}; "
+          f"5% violations only in Case 2: {only2}")
+    x = np.linspace(-5, 5, 2000)
+    fig, ax = plt.subplots(figsize=(7, 4.6))
+    ax.plot(x, norm.pdf(x), "b", label="Normal N(0,1)")
+    ax.plot(x, stats.t.pdf(x / s, nu) / s, "r", label=f"Student-t standardized (ν = {nu:.2f})")
+    for qa, c, ls, lab in [(q_n[0], "b", "-", "5%"), (q_t[0], "r", "-", "5%"), (q_n[1], "b", "--", "1%"), (q_t[1], "r", "--", "1%")]:
+        ax.axvline(qa, color=c, ls=ls, lw=1, label=f"{lab} quantile {'Normal' if c == 'b' else 't'}: {qa:.3f}")
+    ax.set_xlim(-4.5, 1); ax.legend(fontsize=8, loc="upper left")
+    ax.set_title(f"Left tail of Normal and unit-variance Student-t ({SHOW_T})\nsolid = 5% quantile, dashed = 1% quantile", fontsize=10)
+    fig.tight_layout(); fig.savefig(f"{FIG_DIR}/G4_quantile_crossing.png", dpi=150)
+
+    # TABLE G6: re-estimations rejected by the plausibility check in the rolling forecasts (parameters of the previous block kept)
+    g6 = pd.DataFrame(IMPLAUSIBLE_LOG, columns=["series", "model", "dist", "block_start", "persistence_rejected",
+                                                "persistence_kept", "params_rejected", "params_kept"])
+    g6.to_csv("outputs/tables/G6_implausible_blocks.csv", index=False)
+    print(f"\nPlausibility check: {len(g6)} of {2 * len(r) * len(range(0, len(f), H_REFIT))} re-estimations rejected")
+    print(g6.drop(columns=["params_rejected", "params_kept"]).to_string(index=False) if len(g6) else "none")
+
+    # Report Tables 4.1-4.4 and 5.1-5.3, formatted as in Word (outputs/tables/report)
+    report_tables(w, candidates, models, Z_diagnostic, z_normality(Z), ic, best, summary)
