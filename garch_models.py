@@ -23,7 +23,7 @@ def spec(r, dist="normal", o=0, p=1, q=1, vol="GARCH"):
 
 def fit_in_sample(r, dist="normal", o=0, p=1, q=1, vol="GARCH"):
     """Fits the model on the in-sample period only (up to IN_SAMPLE_END)."""
-    return spec(r.loc[:IN_SAMPLE_END], dist, o, p, q, vol).fit(disp="off")    # in-sample cut here
+    return spec(r.loc[:IN_SAMPLE_END], dist, o, p, q, vol).fit(disp="off")   
 
 def persistence(params, vol):
     """Persistence: alpha+beta+gamma/2 (GARCH/GJR), beta (EGARCH), alpha*E(|Z|-gamma*Z)^delta + beta (APARCH, Z ~ N(0,1))."""
@@ -31,9 +31,9 @@ def persistence(params, vol):
     if vol == "EGARCH": return b
     if vol == "APARCH":
         d = params["delta"]
-        kappa = quad(lambda z: (abs(z) - g * z) ** d * norm.pdf(z), -np.inf, np.inf)[0]   # E(|Z|-gamma*Z)^delta
+        kappa = quad(lambda z: (abs(z) - g * z) ** d * norm.pdf(z), -np.inf, np.inf)[0]   
         return a * kappa + b
-    return a + b + 0.5 * g                                              # GARCH and GJR-GARCH
+    return a + b + 0.5 * g                                              
 
 def param_tables(table, series, res):
     """Writes every estimated parameter with its p-value, persistence, BIC, AIC and log-likelihood """
@@ -54,7 +54,7 @@ def sign_bias_test(z):
     """Engle-Ng (1993) sign and size bias tests: z^2_t on S-, S-*z and S+*z at t-1, joint test n*R^2 ~ chi2(3)."""
     z = z.dropna()
     z2, z_lag = (z ** 2).iloc[1:], z.shift(1).iloc[1:]
-    neg = (z_lag < 0).astype(float)                                  # S- : 1 if yesterday's shock was negative
+    neg = (z_lag < 0).astype(float)                                  
     X = sm.add_constant(np.column_stack([neg, neg * z_lag, (1 - neg) * z_lag]))
     ols = sm.OLS(z2.values, X).fit()
     return {"sign_bias_p": ols.pvalues[1], "neg_size_bias_p": ols.pvalues[2], "pos_size_bias_p": ols.pvalues[3],
@@ -65,7 +65,7 @@ def table_serial_z(Z, lags=10):
     rows = {}
     for c in Z:
         z = Z[c].dropna()
-        band = 1.96 / np.sqrt(len(z))                                # 95% band under iid
+        band = 1.96 / np.sqrt(len(z))                                
         row = {}
         for name, x in [("Z", z), ("Z2", z ** 2)]:
             a = acf(x, nlags=lags, fft=True)[1:]                    
@@ -75,42 +75,42 @@ def table_serial_z(Z, lags=10):
             row[f"sig_lags_{name}"] = ", ".join(f"{k}:{v:.3f}" for k, v in out.items()) or "-"   
             row[f"LB{lags}_{name}_p"] = acorr_ljungbox(x, lags=[lags])["lb_pvalue"].iloc[0]
         row[f"ARCH_LM{lags}_p"] = het_arch(z, nlags=lags)[1]
-        row.update(sign_bias_test(z))                                # sign_bias_p, neg/pos_size_bias_p, joint_p
+        row.update(sign_bias_test(z))                                
         rows[c] = row
     return pd.DataFrame.from_dict(rows, orient="index")
 
 def select_model(r, dist="normal", alpha=0.05):
     """GARCH(1,1) -> GJR if joint rejects -> by BIC among sig. gamma: GJR1/GJR2/EGARCH/APARCH if joint still rejects, EGARCH/APARCH if GJR gamma not sig."""
     rows, fits_m = {}, {}
-    def fit(vol, p, o, q):                                                      # fits a candidate and records its row
+    def fit(vol, p, o, q):                                                      
         res = fit_in_sample(r, dist, o=o, p=p, q=q, vol=vol)
-        name = f"{res.model.volatility.name}({p},{o},{q})"                      # e.g. GJR-GARCH(1,1,1), GJR-GARCH(1,2,1)
+        name = f"{res.model.volatility.name}({p},{o},{q})"                      
         fits_m[name] = res
         rows[name] = {"vol": vol, "p": p, "o": o, "q": q, "BIC": res.bic,
-                      "gamma": res.params.get(f"gamma[{o}]", np.nan),         # last asymmetric term (gamma[2] if o=2)
+                      "gamma": res.params.get(f"gamma[{o}]", np.nan),         
                       "gamma_p": res.pvalues.get(f"gamma[{o}]", np.nan),
                       "delta": res.params.get("delta", np.nan), "delta_p": res.pvalues.get("delta", np.nan),
                       **sign_bias_test(std_resid(res))}
         return name
-    sig = lambda name: rows[name]["gamma_p"] < alpha                            # asymmetric model admissible only if gamma sig.
-    def best_of(names, default):                                                # lowest BIC among those with significant gamma
+    sig = lambda name: rows[name]["gamma_p"] < alpha                            
+    def best_of(names, default):                                                
         adm = [n for n in names if sig(n)]
         return min(adm, key=lambda n: rows[n]["BIC"]) if adm else default
     best = fit("GARCH", 1, 0, 1)
-    if rows[best]["joint_p"] < alpha:                                           # asymmetry left in the GARCH(1,1) Z
-        gjr = fit("GARCH", 1, 1, 1)                                             # GJR (vol="GARCH" with o=1)
-        if not sig(gjr):                                                        # GJR gamma not sig. -> EGARCH vs APARCH
+    if rows[best]["joint_p"] < alpha:                                           
+        gjr = fit("GARCH", 1, 1, 1)                                             
+        if not sig(gjr):                                                        
             best = best_of([fit("EGARCH", 1, 1, 1), fit("APARCH", 1, 1, 1)], best)
-        elif rows[gjr]["joint_p"] < alpha:                                      # GJR sig. but not enough -> GJR1/GJR2/EGARCH/APARCH
+        elif rows[gjr]["joint_p"] < alpha:                                      
             best = best_of([gjr, fit("GARCH", 1, 2, 1), fit("EGARCH", 1, 1, 1), fit("APARCH", 1, 1, 1)], gjr)
         else:
-            best = gjr                                                          # GJR sig. and no asymmetry left
+            best = gjr                                                         
     cand = pd.DataFrame.from_dict(rows, orient="index")
     cand["chosen"] = cand.index == best
     b = rows[best]
     return cand, (b["vol"], b["p"], b["o"], b["q"]), fits_m[best]
 
-CANDIDATES = ["t", "skewt", "ged"]                                   # alternatives to the Normal
+CANDIDATES = ["t", "skewt", "ged"]                                  
 
 def z_normality(Z):
     """POINT 4b: is Z Normal? Moments, Jarque-Bera and Kolmogorov-Smirnov (vs N(0,1)) for every series."""
@@ -139,7 +139,7 @@ def density_asymmetry_check(r, orders_pre, orders, best):
     rows = {}
     for c in r:
         for stage, ords in [("original", orders_pre), ("refined", orders)]:
-            if stage == "refined" and orders[c] == orders_pre[c]: continue      # model not refined: same as the original
+            if stage == "refined" and orders[c] == orders_pre[c]: continue      
             vol, p, o, q = ords[c]
             row = {"model": f"{vol}({p},{o},{q})", "dist": best[c]}
             for name, d in [("normal", "normal"), ("chosen", best[c])]:
@@ -154,14 +154,12 @@ def implausible(params, vol):
     a, g, b = (params.filter(regex=rf"^{k}\[\d+\]$").sum() for k in ("alpha", "gamma", "beta"))
     if vol == "EGARCH":
         bad = abs(b) >= 1 or a - g <= 0                      
-    elif vol == "APARCH":
-        bad = b >= 1 
-    else:                                        
-        bad = a + b + 0.5 * g >= 1                           
+    else:
+        bad = persistence(params, vol) >= 1                            
     nu = params.get("nu", params.get("eta", np.inf))
     return bool(bad or nu <= 2.1)                             
 
-IMPLAUSIBLE_LOG = []                                                 # blocks rejected by implausible() -> TABLE G6
+IMPLAUSIBLE_LOG = []  # blocks rejected by implausible() -> TABLE G6
 
 def oos_forecasts(r, dist="normal", vol="GARCH", p=1, o=0, q=1, h=H_REFIT, window=W_ROLL, alphas=ALPHAS):
     """One-step-ahead mu, sigma and quantiles q_alpha per OOS day; refit every h days on the last `window` days."""
@@ -242,7 +240,7 @@ if __name__ == "__main__":
 
     # Fig G1: conditional variance of four series incl. PORT, and of all series (grid)
     FIG_DIR = "outputs/figures"
-    show = ["Roche", "UBS", "Nestle", "PORT"]
+    show = ["Sika", "Lonza", "Richemont", "PORT"]
     fig, axes = plt.subplots(2, 2, figsize=(12, 6))
     for ax, c in zip(axes.ravel(), show):
         ax.plot(fits[c].conditional_volatility ** 2, lw=.7); ax.set_title(f"{c} - conditional variance (%$^2$)", fontsize=10)
@@ -258,7 +256,7 @@ if __name__ == "__main__":
     fc1 = {}
     for c in r:
         vol, p, o, q = orders[c]
-        fc1[c] = oos_forecasts(r[c], "normal", vol, p, o, q)        # mu, sigma, Normal quantiles for every OOS day
+        fc1[c] = oos_forecasts(r[c], "normal", vol, p, o, q)        
 
     # Normality of the in-sample standardised residuals Z (TABLE G3, Fig G2)
     z_normality(Z).to_csv("outputs/tables/G3_Z_normality.csv")
@@ -277,11 +275,11 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(nr, nc, figsize=(nc * 3.6, nr * 2.8)); axes = axes.ravel()
     for ax, c in zip(axes, r):
         vol, p, o, q = orders[c]
-        f = fit_in_sample(r[c], best[c], o=o, p=p, q=q, vol=vol)            # model refitted with the chosen density
+        f = fit_in_sample(r[c], best[c], o=o, p=p, q=q, vol=vol)            
         z = np.sort(std_resid(f).values)
         k = f.model.distribution.num_params
-        pp = (np.arange(1, len(z) + 1) - 0.5) / len(z)                         # plotting positions
-        qt = f.model.distribution.ppf(pp, f.params.iloc[-k:].values)            # theoretical quantiles (unit variance)
+        pp = (np.arange(1, len(z) + 1) - 0.5) / len(z)                         
+        qt = f.model.distribution.ppf(pp, f.params.iloc[-k:].values)            
         ax.scatter(qt, z, s=3); ax.plot(qt, qt, "r", lw=.8)
         ax.set_title(f"{c} ({best[c]})", fontsize=9)
     for ax in axes[n:]: ax.axis("off")
@@ -323,13 +321,13 @@ if __name__ == "__main__":
     fig.savefig(f"{FIG_DIR}/G3_var_case1_case2.png", dpi=150)
 
     # Fig G4: Normal vs unit-variance Student-t, 5% and 1% quantiles (why Case 2 is less conservative at 5% and more at 1%)
-    SHOW_T = "Swisscom"                                              # a Student-t series with more Case 2 violations at 5%
+    SHOW_T = "Swisscom"                                              
     vol, p, o, q = orders[SHOW_T]
-    nu = fit_in_sample(r[SHOW_T], "t", o=o, p=p, q=q, vol=vol).params["nu"]   # in-sample nu (Table G4)
+    nu = fit_in_sample(r[SHOW_T], "t", o=o, p=p, q=q, vol=vol).params["nu"]   
     from arch.univariate import StudentsT
-    q_n, q_t = norm.ppf(ALPHAS), StudentsT().ppf(np.array(ALPHAS), [nu])     # unit-variance t, as in oos_forecasts
-    s = np.sqrt((nu - 2) / nu)                                                  # rescales the classic t to variance 1
-    x_cross = brentq(lambda x: norm.cdf(x) - stats.t.cdf(x / s, nu), -4, -1.2)  # point where the two left tails are equal
+    q_n, q_t = norm.ppf(ALPHAS), StudentsT().ppf(np.array(ALPHAS), [nu])     
+    s = np.sqrt((nu - 2) / nu)                                                  
+    x_cross = brentq(lambda x: norm.cdf(x) - stats.t.cdf(x / s, nu), -4, -1.2)  
     f = pd.read_csv(f"{FC_DIR}/{SHOW_T}.csv", index_col=0, parse_dates=True)
     only2 = ((f["ret"] < f["VaR_case2_0.05"]) & (f["ret"] >= f["VaR_case1_0.05"])).sum()
     print(f"\n{SHOW_T}: nu = {nu:.2f}; quantiles Normal {q_n.round(3)}, t {q_t.round(3)}; crossing at {x_cross:.3f}; "
@@ -348,6 +346,6 @@ if __name__ == "__main__":
     g6 = pd.DataFrame(IMPLAUSIBLE_LOG, columns=["series", "model", "dist", "block_start", "persistence_rejected",
                                                 "persistence_kept", "params_rejected", "params_kept"])
     g6.to_csv("outputs/tables/G6_implausible_blocks.csv", index=False)
-    print(f"\nPlausibility check: {len(g6)} of {2 * len(r) * len(range(0, len(f), H_REFIT))} re-estimations rejected")
+    print(f"\nPlausibility check: {len(g6)} of {2 * r.shape[1] * len(range(0, len(f), H_REFIT))} re-estimations rejected")
     print(g6.drop(columns=["params_rejected", "params_kept"]).to_string(index=False) if len(g6) else "none")
 
