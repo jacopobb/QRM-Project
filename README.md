@@ -1,6 +1,6 @@
 # Group 9 - Swiss large caps
 
-| File | Homework points | Suggested owner |
+| File | Homework points |  Owner |
 |---|---|---|
 | config.py, data_prep.py | 1, portfolio weights | Bonotto |
 | descriptive.py | 2 | Zhang |
