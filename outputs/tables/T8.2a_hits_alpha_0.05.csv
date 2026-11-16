@@ -1,0 +1,19 @@
+series,expected,C1 Gaussian GARCH,C2 GARCH alt. density,C3 GARCH+GEV (indep.),C4 GARCH+GEV (ext. index),C5 GARCH+GPD
+ABB,12.5,18,18,19,19,19
+EWP,12.5,15,11,14,14,14
+Geberit,12.5,11,15,16,14,14
+Givaudan,12.5,12,13,13,12,12
+HelvetiaBaloise,12.5,12,14,13,12,12
+Holcim,12.5,19,24,21,21,21
+Lonza,12.5,7,14,16,13,13
+Nestle,12.5,10,11,10,10,10
+Novartis,12.5,18,19,19,19,18
+PORT,12.5,13,14,12,12,13
+Richemont,12.5,14,16,18,18,18
+Roche,12.5,13,16,12,12,13
+Sika,12.5,11,11,12,11,11
+SwissLife,12.5,11,13,12,12,11
+SwissRe,12.5,12,16,16,15,15
+Swisscom,12.5,13,16,17,17,17
+UBS,12.5,7,8,8,8,7
+Zurich,12.5,15,14,16,16,16

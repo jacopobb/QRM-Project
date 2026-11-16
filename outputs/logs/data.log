@@ -1,0 +1,70 @@
+Rows: raw 3769 -> after removing weekends/holidays 3769
+Missing values per series:
+ ROPC.S     0
+NOVN.S     0
+NESN.S     0
+UBSG.S     0
+ABBN.S     0
+ZURN.S     0
+CFR.S      0
+SRENH.S    0
+LONN.S     0
+GIVN.S     0
+HOLN.S     0
+SIKA.S     0
+SLHN.S     0
+GEBN.S     0
+SCMN.S     0
+HBANC.S    0
+First valid date per series:
+ ROPC.S     2011-09-26
+NOVN.S     2011-09-26
+NESN.S     2011-09-26
+UBSG.S     2011-09-26
+ABBN.S     2011-09-26
+ZURN.S     2011-09-26
+CFR.S      2011-09-26
+SRENH.S    2011-09-26
+LONN.S     2011-09-26
+GIVN.S     2011-09-26
+HOLN.S     2011-09-26
+SIKA.S     2011-09-26
+SLHN.S     2011-09-26
+GEBN.S     2011-09-26
+SCMN.S     2011-09-26
+HBANC.S    2011-09-26
+Final sample: 2011-09-26 -> 2026-09-30, 3769 days
+
+Possible jumps (>15%):
+                         ret_%
+Date                         
+2014-12-08 SIKA.S  -24.787959
+2015-01-15 CFR.S   -16.843866
+           LONN.S  -19.655667
+2020-03-12 SRENH.S -16.975380
+           SLHN.S  -16.057661
+2020-03-24 SRENH.S  15.476493
+2023-09-18 LONN.S  -15.895378
+2023-10-17 LONN.S  -17.609830
+2025-01-16 CFR.S    15.152742
+
+PORT weights:
+ ROPC.S     0.1248
+NOVN.S     0.1213
+NESN.S     0.1238
+UBSG.S     0.0145
+ABBN.S     0.0045
+ZURN.S     0.0754
+CFR.S      0.0732
+SRENH.S    0.1622
+LONN.S     0.0041
+GIVN.S     0.0543
+HOLN.S     0.0037
+SIKA.S     0.0565
+SLHN.S     0.0899
+GEBN.S     0.0201
+SCMN.S     0.0639
+HBANC.S    0.0080 
+sum = 1.0
+
+Saved data/prices_clean.csv and data/returns.csv
