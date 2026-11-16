@@ -15,53 +15,43 @@ Geberit            0.0201
 Swisscom           0.0639
 HelvetiaBaloise    0.0080
 Name: weight, dtype: float64
-                                     vol  p  o  q         BIC   gamma  gamma_p   delta  delta_p  sign_bias_p  neg_size_bias_p  pos_size_bias_p  joint_p  chosen
-series          model                                                                                                                                          
-Swisscom        GARCH(1,0,1)       GARCH  1  0  1   9793.8652     NaN      NaN     NaN      NaN       0.2517           0.6800           0.9772   0.2970    True
-Nestle          GARCH(1,0,1)       GARCH  1  0  1   9623.0235     NaN      NaN     NaN      NaN       0.6306           0.0221           0.3539   0.0273   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1   9603.4277  0.0857   0.0009     NaN      NaN       0.9465           0.1617           0.9359   0.3762    True
-Richemont       GARCH(1,0,1)       GARCH  1  0  1  14208.4546     NaN      NaN     NaN      NaN       0.8836           0.0068           0.7026   0.0224   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1  14202.2025  0.0348   0.1215     NaN      NaN       0.8949           0.0215           0.3043   0.0561   False
-                EGARCH(1,1,1)     EGARCH  1  1  1  14142.9467 -0.0334   0.0352     NaN      NaN       0.8003           0.0091           0.4835   0.0400    True
-                APARCH(1,1,1)     APARCH  1  1  1  14146.4217  0.4062   0.0628  0.7043   0.0015       0.5362           0.0034           0.5665   0.0227   False
-UBS             GARCH(1,0,1)       GARCH  1  0  1  13812.6934     NaN      NaN     NaN      NaN       0.5499           0.1338           0.8871   0.0952    True
-Zurich          GARCH(1,0,1)       GARCH  1  0  1  10949.3328     NaN      NaN     NaN      NaN       0.1534           0.2977           0.8177   0.0214   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1  10932.4544  0.0741   0.1183     NaN      NaN       0.1908           0.6382           0.9937   0.1699   False
-                EGARCH(1,1,1)     EGARCH  1  1  1  10897.8945 -0.0747   0.0001     NaN      NaN       0.3052           0.4704           0.9117   0.1928   False
-                APARCH(1,1,1)     APARCH  1  1  1  10883.2731  0.6066   0.0003  0.9450   0.0000       0.4459           0.5139           0.8061   0.3204    True
-SwissRe         GARCH(1,0,1)       GARCH  1  0  1  11975.7205     NaN      NaN     NaN      NaN       0.3916           0.8810           0.6533   0.8462    True
-SwissLife       GARCH(1,0,1)       GARCH  1  0  1  11931.9860     NaN      NaN     NaN      NaN       0.9843           0.0111           0.2200   0.0013   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1  11890.5446  0.1209   0.0005     NaN      NaN       0.7815           0.1571           0.7469   0.1816    True
-HelvetiaBaloise GARCH(1,0,1)       GARCH  1  0  1  11429.0018     NaN      NaN     NaN      NaN       0.5842           0.1498           0.4559   0.3523    True
-Roche           GARCH(1,0,1)       GARCH  1  0  1  11146.4866     NaN      NaN     NaN      NaN       0.3707           0.0122           0.6194   0.0586    True
-Novartis        GARCH(1,0,1)       GARCH  1  0  1  10724.9027     NaN      NaN     NaN      NaN       0.1506           0.0492           0.1538   0.1064    True
-Lonza           GARCH(1,0,1)       GARCH  1  0  1  14068.5403     NaN      NaN     NaN      NaN       0.5775           0.9753           0.8726   0.8447    True
-ABB             GARCH(1,0,1)       GARCH  1  0  1  12317.3528     NaN      NaN     NaN      NaN       0.3878           0.2061           0.9890   0.0949    True
-Geberit         GARCH(1,0,1)       GARCH  1  0  1  11909.7426     NaN      NaN     NaN      NaN       0.4783           0.0361           0.3055   0.0764    True
-Givaudan        GARCH(1,0,1)       GARCH  1  0  1  11361.2579     NaN      NaN     NaN      NaN       0.7721           0.5591           0.9488   0.7977    True
-Holcim          GARCH(1,0,1)       GARCH  1  0  1  12996.7234     NaN      NaN     NaN      NaN       0.7987           0.0754           0.5662   0.0456   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1  12952.3206  0.0894   0.0001     NaN      NaN       0.2555           0.3881           0.3561   0.2518    True
-Sika            GARCH(1,0,1)       GARCH  1  0  1  13210.0331     NaN      NaN     NaN      NaN       0.8711           0.7313           0.8943   0.9860    True
-PORT            GARCH(1,0,1)       GARCH  1  0  1   8579.8165     NaN      NaN     NaN      NaN       0.1879           0.2615           0.0266   0.0000   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1   8496.2667  0.2059   0.0000     NaN      NaN       0.0796           0.5424           0.3946   0.0207   False
-                GJR-GARCH(1,2,1)   GARCH  1  2  1   8504.4323  0.0000   1.0000     NaN      NaN       0.0796           0.5424           0.3946   0.0207   False
-                EGARCH(1,1,1)     EGARCH  1  1  1   8462.1309 -0.1493   0.0000     NaN      NaN       0.3316           0.9127           0.5315   0.1799   False
-                APARCH(1,1,1)     APARCH  1  1  1   8453.9257  0.7983   0.0000  0.9377   0.0000       0.7270           0.4474           0.4644   0.2381    True
-EWP             GARCH(1,0,1)       GARCH  1  0  1   9037.3990     NaN      NaN     NaN      NaN       0.2743           0.2474           0.0143   0.0000   False
-                GJR-GARCH(1,1,1)   GARCH  1  1  1   8960.2072  0.2092   0.0000     NaN      NaN       0.1051           0.6125           0.2859   0.0144   False
-                GJR-GARCH(1,2,1)   GARCH  1  2  1   8968.3728  0.0000   1.0000     NaN      NaN       0.1051           0.6125           0.2859   0.0144   False
-                EGARCH(1,1,1)     EGARCH  1  1  1   8913.5871 -0.1485   0.0000     NaN      NaN       0.3184           0.8262           0.4284   0.0910   False
-                APARCH(1,1,1)     APARCH  1  1  1   8894.8590  0.8246   0.0000  0.7733   0.0000       0.9768           0.2628           0.3335   0.1693    True
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: ConvergenceWarning: The optimizer returned code 4. The message is:
-Inequality constraints incompatible
-See scipy.optimize.fmin_slsqp for code meaning.
-
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
+                                     vol  p  o  q         BIC   gamma  gamma_p   delta  delta_p  sign_bias_p  neg_size_bias_p  pos_size_bias_p  joint_p  chosen  dBIC_vs_GARCH11
+series          model                                                                                                                                                           
+Swisscom        GARCH(1,0,1)       GARCH  1  0  1   9793.8652     NaN      NaN     NaN      NaN       0.2517           0.6800           0.9772   0.2970    True           0.0000
+Nestle          GARCH(1,0,1)       GARCH  1  0  1   9623.0235     NaN      NaN     NaN      NaN       0.6306           0.0221           0.3539   0.0273   False           0.0000
+                GJR-GARCH(1,1,1)   GARCH  1  1  1   9603.4277  0.0857   0.0009     NaN      NaN       0.9465           0.1617           0.9359   0.3762    True         -19.5958
+Richemont       GARCH(1,0,1)       GARCH  1  0  1  14208.4546     NaN      NaN     NaN      NaN       0.8836           0.0068           0.7026   0.0224   False           0.0000
+                GJR-GARCH(1,1,1)   GARCH  1  1  1  14202.2025  0.0348   0.1215     NaN      NaN       0.8949           0.0215           0.3043   0.0561   False          -6.2521
+                EGARCH(1,1,1)     EGARCH  1  1  1  14142.9467 -0.0334   0.0352     NaN      NaN       0.8003           0.0091           0.4835   0.0400    True         -65.5078
+                APARCH(1,1,1)     APARCH  1  1  1  14146.4217  0.4062   0.0628  0.7043   0.0015       0.5577           0.0036           0.5556   0.0231   False         -62.0328
+UBS             GARCH(1,0,1)       GARCH  1  0  1  13812.6934     NaN      NaN     NaN      NaN       0.5499           0.1338           0.8871   0.0952    True           0.0000
+Zurich          GARCH(1,0,1)       GARCH  1  0  1  10949.3328     NaN      NaN     NaN      NaN       0.1534           0.2977           0.8177   0.0214   False           0.0000
+                GJR-GARCH(1,1,1)   GARCH  1  1  1  10932.4544  0.0741   0.1183     NaN      NaN       0.1908           0.6382           0.9937   0.1699   False         -16.8785
+                EGARCH(1,1,1)     EGARCH  1  1  1  10897.8945 -0.0747   0.0001     NaN      NaN       0.3052           0.4704           0.9117   0.1928   False         -51.4383
+                APARCH(1,1,1)     APARCH  1  1  1  10883.2731  0.6066   0.0003  0.9449   0.0000       0.4460           0.5139           0.8061   0.3205    True         -66.0598
+SwissRe         GARCH(1,0,1)       GARCH  1  0  1  11975.7205     NaN      NaN     NaN      NaN       0.3916           0.8810           0.6533   0.8462    True           0.0000
+SwissLife       GARCH(1,0,1)       GARCH  1  0  1  11931.9860     NaN      NaN     NaN      NaN       0.9843           0.0111           0.2200   0.0013   False           0.0000
+                GJR-GARCH(1,1,1)   GARCH  1  1  1  11890.5446  0.1209   0.0005     NaN      NaN       0.7815           0.1571           0.7469   0.1816    True         -41.4414
+HelvetiaBaloise GARCH(1,0,1)       GARCH  1  0  1  11429.0018     NaN      NaN     NaN      NaN       0.5842           0.1498           0.4559   0.3523    True           0.0000
+Roche           GARCH(1,0,1)       GARCH  1  0  1  11146.4866     NaN      NaN     NaN      NaN       0.3707           0.0122           0.6194   0.0586    True           0.0000
+Novartis        GARCH(1,0,1)       GARCH  1  0  1  10724.9027     NaN      NaN     NaN      NaN       0.1506           0.0492           0.1538   0.1064    True           0.0000
+Lonza           GARCH(1,0,1)       GARCH  1  0  1  14068.5403     NaN      NaN     NaN      NaN       0.5775           0.9753           0.8726   0.8447    True           0.0000
+ABB             GARCH(1,0,1)       GARCH  1  0  1  12317.3528     NaN      NaN     NaN      NaN       0.3878           0.2061           0.9890   0.0949    True           0.0000
+Geberit         GARCH(1,0,1)       GARCH  1  0  1  11909.7426     NaN      NaN     NaN      NaN       0.4783           0.0361           0.3055   0.0764    True           0.0000
+Givaudan        GARCH(1,0,1)       GARCH  1  0  1  11361.2579     NaN      NaN     NaN      NaN       0.7721           0.5591           0.9488   0.7977    True           0.0000
+Holcim          GARCH(1,0,1)       GARCH  1  0  1  12996.7234     NaN      NaN     NaN      NaN       0.7987           0.0754           0.5662   0.0456   False           0.0000
+                GJR-GARCH(1,1,1)   GARCH  1  1  1  12952.3206  0.0894   0.0001     NaN      NaN       0.2555           0.3881           0.3561   0.2518    True         -44.4028
+Sika            GARCH(1,0,1)       GARCH  1  0  1  13210.0331     NaN      NaN     NaN      NaN       0.8711           0.7313           0.8943   0.9860    True           0.0000
+PORT            GARCH(1,0,1)       GARCH  1  0  1   8579.8165     NaN      NaN     NaN      NaN       0.1879           0.2615           0.0266   0.0000   False           0.0000
+                GJR-GARCH(1,1,1)   GARCH  1  1  1   8496.2667  0.2059   0.0000     NaN      NaN       0.0796           0.5424           0.3946   0.0207   False         -83.5498
+                GJR-GARCH(1,2,1)   GARCH  1  2  1   8504.4323  0.0000   1.0000     NaN      NaN       0.0796           0.5424           0.3946   0.0207   False         -75.3842
+                EGARCH(1,1,1)     EGARCH  1  1  1   8462.1309 -0.1493   0.0000     NaN      NaN       0.3316           0.9127           0.5315   0.1799   False        -117.6856
+                APARCH(1,1,1)     APARCH  1  1  1   8453.9257  0.7983   0.0000  0.9377   0.0000       0.7270           0.4474           0.4644   0.2381    True        -125.8908
 
 Chosen density counts:
  chosen_dist
-skewt    10
-t         8
+skewt    9
+t        8
                                   model   dist  BIC_normal  sign_bias_p_normal  neg_size_bias_p_normal  pos_size_bias_p_normal  joint_p_normal  BIC_chosen  sign_bias_p_chosen  neg_size_bias_p_chosen  pos_size_bias_p_chosen  joint_p_chosen
 series          stage                                                                                                                                                                                                                         
 Swisscom        original   GARCH(1,0,1)      t   9793.8652              0.2517                  0.6800                  0.9772          0.2970   9139.4104              0.4347                  0.0620                  0.4607          0.0741
@@ -71,7 +61,7 @@ Richemont       original   GARCH(1,0,1)      t  14208.4546              0.8836  
                 refined   EGARCH(1,1,1)      t  14142.9467              0.8003                  0.0091                  0.4835          0.0400  13606.5656              0.7706                  0.0033                  0.2086          0.0127
 UBS             original   GARCH(1,0,1)      t  13812.6934              0.5499                  0.1338                  0.8871          0.0952  13356.0406              0.8330                  0.0163                  0.9621          0.0240
 Zurich          original   GARCH(1,0,1)  skewt  10949.3328              0.1534                  0.2977                  0.8177          0.0214  10338.0501              0.1337                  0.5888                  0.6902          0.0355
-                refined   APARCH(1,1,1)  skewt  10883.2731              0.4459                  0.5139                  0.8061          0.3204  10273.4564              0.5603                  0.7102                  0.7715          0.5750
+                refined   APARCH(1,1,1)  skewt  10883.2731              0.4460                  0.5139                  0.8061          0.3205  10273.4564              0.5603                  0.7102                  0.7715          0.5750
 SwissRe         original   GARCH(1,0,1)  skewt  11975.7205              0.3916                  0.8810                  0.6533          0.8462  11198.1621              0.2711                  0.6927                  0.6591          0.7324
 SwissLife       original   GARCH(1,0,1)  skewt  11931.9860              0.9843                  0.0111                  0.2200          0.0013  11483.5115              0.6263                  0.0025                  0.1966          0.0008
                 refined    GARCH(1,1,1)  skewt  11890.5446              0.7815                  0.1571                  0.7469          0.1816  11460.2444              0.8107                  0.2245                  0.6121          0.2299
@@ -87,44 +77,14 @@ Holcim          original   GARCH(1,0,1)  skewt  12996.7234              0.7987  
 Sika            original   GARCH(1,0,1)      t  13210.0331              0.8711                  0.7313                  0.8943          0.9860  12654.7772              0.8735                  0.3375                  0.3013          0.5471
 PORT            original   GARCH(1,0,1)  skewt   8579.8165              0.1879                  0.2615                  0.0266          0.0000   8358.8590              0.3221                  0.0699                  0.0281          0.0000
                 refined   APARCH(1,1,1)  skewt   8453.9257              0.7270                  0.4474                  0.4644          0.2381   8223.4898              0.7949                  0.2362                  0.8593          0.3048
-EWP             original   GARCH(1,0,1)  skewt   9037.3990              0.2743                  0.2474                  0.0143          0.0000   8819.1682              0.2614                  0.1042                  0.0269          0.0000
-                refined   APARCH(1,1,1)  skewt   8894.8590              0.9768                  0.2628                  0.3335          0.1693   8663.7586              0.8869                  0.1196                  0.7913          0.1531
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: StartingValueWarning: Starting values do not satisfy the parameter constraints in the model.  The
-provided starting values will be ignored.
+  Sika GARCH t block 2026-09-10: implausible parameters, previous parameters kept
+  Sika GARCH t block 2026-09-17: implausible parameters, previous parameters kept
+  Sika GARCH t block 2026-09-24: implausible parameters, previous parameters kept
 
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: StartingValueWarning: Starting values do not satisfy the parameter constraints in the model.  The
-provided starting values will be ignored.
+Swisscom: nu = 3.95; quantiles Normal [-1.645 -2.326], t [-1.503 -2.651]; crossing at -1.959; 5% violations only in Case 2: 5
 
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: StartingValueWarning: Starting values do not satisfy the parameter constraints in the model.  The
-provided starting values will be ignored.
-
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: StartingValueWarning: Starting values do not satisfy the parameter constraints in the model.  The
-provided starting values will be ignored.
-
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: StartingValueWarning: Starting values do not satisfy the parameter constraints in the model.  The
-provided starting values will be ignored.
-
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: StartingValueWarning: Starting values do not satisfy the parameter constraints in the model.  The
-provided starting values will be ignored.
-
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:149: ConvergenceWarning: The optimizer returned code 9. The message is:
-Iteration limit reached
-See scipy.optimize.fmin_slsqp for code meaning.
-
-  res = mod.fit(disp="off")
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:151: ConvergenceWarning: The optimizer returned code 9. The message is:
-Iteration limit reached
-See scipy.optimize.fmin_slsqp for code meaning.
-
-  res_w = mod.fit(disp="off", starting_values=prev.params.values)            # keep the higher likelihood
-/Users/jacopo/Downloads/QRM-Project_final/garch_models.py:149: ConvergenceWarning: The optimizer returned code 9. The message is:
-Iteration limit reached
-See scipy.optimize.fmin_slsqp for code meaning.
-
-  res = mod.fit(disp="off")
+Plausibility check: 3 of 376800 re-estimations rejected
+series        model dist block_start  persistence_rejected  persistence_kept
+  Sika GARCH(1,0,1)    t  2026-09-10                   1.0          0.999917
+  Sika GARCH(1,0,1)    t  2026-09-17                   1.0          0.999917
+  Sika GARCH(1,0,1)    t  2026-09-24                   1.0          0.999917
