@@ -1,6 +1,5 @@
 series,expected,C1 Gaussian GARCH,C2 GARCH alt. density,C3 GARCH+GEV (indep.),C4 GARCH+GEV (ext. index),C5 GARCH+GPD
 ABB,12.5,16,13,19,19,17
-EWP,12.5,15,11,14,14,14
 Geberit,12.5,12,14,15,15,14
 Givaudan,12.5,12,12,12,12,12
 HelvetiaBaloise,12.5,12,11,12,12,12

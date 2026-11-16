@@ -1,5 +1,4 @@
-Series with forecasts: ['ABB', 'EWP', 'Geberit', 'Givaudan', 'HelvetiaBaloise', 'Holcim', 'Lonza', 'Nestle', 'Novartis', 'PORT', 'Richemont', 'Roche', 'Sika', 'SwissLife', 'SwissRe', 'Swisscom', 'UBS', 'Zurich'] | alphas: [0.05, 0.01] | GPD xi range: 0.105 to 0.321
-  EWP: no GPD parameters (was it dropped in evt.py?), skipped
+Series with forecasts: ['ABB', 'Geberit', 'Givaudan', 'HelvetiaBaloise', 'Holcim', 'Lonza', 'Nestle', 'Novartis', 'PORT', 'Richemont', 'Roche', 'Sika', 'SwissLife', 'SwissRe', 'Swisscom', 'UBS', 'Zurich'] | alphas: [0.05, 0.01] | GPD xi range: 0.105 to 0.321
 
 === S0_ES_Z_gpd_vs_gauss ===
                           u      xi    beta  VaR_Z_GPD  ES_Z_GPD  ES/VaR_GPD  VaR_Z_Gauss  ES_Z_Gauss  ES/VaR_Gauss

@@ -83,7 +83,7 @@ PORT            original   GARCH(1,0,1)  skewt   8579.8165              0.1879  
 
 Swisscom: nu = 3.95; quantiles Normal [-1.645 -2.326], t [-1.503 -2.651]; crossing at -1.959; 5% violations only in Case 2: 5
 
-Plausibility check: 3 of 376800 re-estimations rejected
+Plausibility check: 3 of 1700 re-estimations rejected
 series        model dist block_start  persistence_rejected  persistence_kept
   Sika GARCH(1,0,1)    t  2026-09-10                   1.0          0.999917
   Sika GARCH(1,0,1)    t  2026-09-17                   1.0          0.999917

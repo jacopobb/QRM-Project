@@ -1,4 +1,4 @@
-Series (18): ['ABB', 'EWP', 'Geberit', 'Givaudan', 'HelvetiaBaloise', 'Holcim', 'Lonza', 'Nestle', 'Novartis', 'PORT', 'Richemont', 'Roche', 'Sika', 'SwissLife', 'SwissRe', 'Swisscom', 'UBS', 'Zurich']
+Series (17): ['ABB', 'Geberit', 'Givaudan', 'HelvetiaBaloise', 'Holcim', 'Lonza', 'Nestle', 'Novartis', 'PORT', 'Richemont', 'Roche', 'Sika', 'SwissLife', 'SwissRe', 'Swisscom', 'UBS', 'Zurich']
 Models detected: ['C1 Gaussian GARCH', 'C2 GARCH alt. density', 'C3 GARCH+GEV (indep.)', 'C4 GARCH+GEV (ext. index)', 'C5 GARCH+GPD']
 Alpha levels: [0.05, 0.01]
 OOS sample: 2025-10-01 -> 2026-09-30, 250 days
@@ -16,16 +16,6 @@ ABB             0.05  C1 Gaussian GARCH          250           12.5    16       
                       C3 GARCH+GEV (indep.)      250            2.5     3         1.2           1.20                 0    -4.7205       -0.6502         -0.8828
                       C4 GARCH+GEV (ext. index)  250            2.5     3         1.2           1.20                 0    -4.7205       -0.6502         -0.8828
                       C5 GARCH+GPD               250            2.5     3         1.2           1.20                 0    -4.6173       -0.7473         -0.9891
-EWP             0.05  C1 Gaussian GARCH          250           12.5    15         6.0           1.20                 1    -1.2248       -0.4367         -2.2866
-                      C2 GARCH alt. density      250           12.5    11         4.4           0.88                 1    -1.2618       -0.5637         -2.2843
-                      C3 GARCH+GEV (indep.)      250           12.5    14         5.6           1.12                 1    -1.2543       -0.4410         -2.2565
-                      C4 GARCH+GEV (ext. index)  250           12.5    14         5.6           1.12                 1    -1.2543       -0.4410         -2.2565
-                      C5 GARCH+GPD               250           12.5    14         5.6           1.12                 1    -1.2359       -0.4578         -2.2753
-                0.01  C1 Gaussian GARCH          250            2.5     5         2.0           2.00                 1    -1.7439       -0.5549         -1.7572
-                      C2 GARCH alt. density      250            2.5     4         1.6           1.60                 1    -1.9900       -0.4721         -1.5811
-                      C3 GARCH+GEV (indep.)      250            2.5     1         0.4           0.40                 0    -2.1322       -1.3612         -1.3612
-                      C4 GARCH+GEV (ext. index)  250            2.5     1         0.4           0.40                 0    -2.1322       -1.3612         -1.3612
-                      C5 GARCH+GPD               250            2.5     3         1.2           1.20                 1    -2.0912       -0.4753         -1.4030
 Geberit         0.05  C1 Gaussian GARCH          250           12.5    12         4.8           0.96                 2    -2.2190       -0.8441         -2.4464
                       C2 GARCH alt. density      250           12.5    14         5.6           1.12                 3    -2.0915       -0.8404         -2.5569
                       C3 GARCH+GEV (indep.)      250           12.5    15         6.0           1.20                 3    -1.9589       -0.9074         -2.6582
@@ -191,7 +181,6 @@ Zurich          0.05  C1 Gaussian GARCH          250           12.5    15       
  model            expected  C1 Gaussian GARCH  C2 GARCH alt. density  C3 GARCH+GEV (indep.)  C4 GARCH+GEV (ext. index)  C5 GARCH+GPD
 series                                                                                                                             
 ABB                  12.5                 16                     13                     19                         19            17
-EWP                  12.5                 15                     11                     14                         14            14
 Geberit              12.5                 12                     14                     15                         15            14
 Givaudan             12.5                 12                     12                     12                         12            12
 HelvetiaBaloise      12.5                 12                     11                     12                         12            12
@@ -213,7 +202,6 @@ Zurich               12.5                 15                     14             
  model            expected  C1 Gaussian GARCH  C2 GARCH alt. density  C3 GARCH+GEV (indep.)  C4 GARCH+GEV (ext. index)  C5 GARCH+GPD
 series                                                                                                                             
 ABB                   2.5                  5                      3                      3                          3             3
-EWP                   2.5                  5                      4                      1                          1             3
 Geberit               2.5                  4                      2                      2                          2             2
 Givaudan              2.5                  3                      3                      3                          3             3
 HelvetiaBaloise       2.5                  5                      3                      2                          2             2
@@ -234,13 +222,13 @@ Zurich                2.5                  8                      6             
 === T8.3_summary_all_series ===
                                   total_hits  expected_total  total_T  n_series_above_expected  n_series  avg_VaR  avg_excess  hits/expected  hit_rate_%
 alpha model                                                                                                                                            
-0.05  C1 Gaussian GARCH                 228           225.0     4500                        6        18   -2.193      -1.030          1.013       5.067
-      C2 GARCH alt. density             241           225.0     4500                       10        18   -2.118      -1.068          1.071       5.356
-      C3 GARCH+GEV (indep.)             252           225.0     4500                       11        18   -2.080      -1.040          1.120       5.600
-      C4 GARCH+GEV (ext. index)         246           225.0     4500                       11        18   -2.117      -1.032          1.093       5.467
-      C5 GARCH+GPD                      246           225.0     4500                       12        18   -2.118      -1.032          1.093       5.467
-0.01  C1 Gaussian GARCH                  86            45.0     4500                       16        18   -3.116      -1.323          1.911       1.911
-      C2 GARCH alt. density              53            45.0     4500                       11        18   -3.767      -1.354          1.178       1.178
-      C3 GARCH+GEV (indep.)              48            45.0     4500                        9        18   -3.844      -1.344          1.067       1.067
-      C4 GARCH+GEV (ext. index)          48            45.0     4500                        9        18   -3.857      -1.331          1.067       1.067
-      C5 GARCH+GPD                       51            45.0     4500                       10        18   -3.788      -1.316          1.133       1.133
+0.05  C1 Gaussian GARCH                 213           212.5     4250                        5        17   -2.250      -1.065          1.002       5.012
+      C2 GARCH alt. density             230           212.5     4250                       10        17   -2.169      -1.097          1.082       5.412
+      C3 GARCH+GEV (indep.)             238           212.5     4250                       10        17   -2.128      -1.075          1.120       5.600
+      C4 GARCH+GEV (ext. index)         232           212.5     4250                       10        17   -2.168      -1.067          1.092       5.459
+      C5 GARCH+GPD                      232           212.5     4250                       11        17   -2.170      -1.065          1.092       5.459
+0.01  C1 Gaussian GARCH                  81            42.5     4250                       15        17   -3.197      -1.368          1.906       1.906
+      C2 GARCH alt. density              49            42.5     4250                       10        17   -3.871      -1.406          1.153       1.153
+      C3 GARCH+GEV (indep.)              47            42.5     4250                        9        17   -3.945      -1.342          1.106       1.106
+      C4 GARCH+GEV (ext. index)          47            42.5     4250                        9        17   -3.959      -1.329          1.106       1.106
+      C5 GARCH+GPD                       48            42.5     4250                        9        17   -3.888      -1.365          1.129       1.129

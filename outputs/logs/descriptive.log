@@ -101,19 +101,19 @@ Sika                       30            20       50             10.1728        
 Date                                      
 2020-03-12                16      -11.8918
 2015-01-16                15       -6.1484
+2015-01-15                15       -9.4635
 2020-03-09                15       -6.5895
 2020-03-24                15        9.2484
-2015-01-15                15       -9.4635
 2025-04-07                13       -5.4837
 2020-03-23                11       -5.0990
 2025-04-04                10       -4.9293
 2020-03-19                 9        4.4850
 2020-06-11                 8       -3.6758
-2016-06-24                 8       -4.5172
 2020-03-16                 8       -5.0621
+2016-06-24                 8       -4.5172
 2020-05-18                 8        3.7484
 2011-09-27                 8        4.2070
-2020-05-04                 7       -3.2764
+2011-11-01                 7       -4.0750
 
 === T3.2c_extreme_sigma ===
                   min_sigma    date_min  max_sigma    date_max
@@ -344,5 +344,5 @@ Date
 2024      20.41      13.86      29.89               0.29
 2025      23.24      15.08      32.46               0.32
 2026      24.14      17.06      33.03               0.23
-/Users/jacopo/Downloads/QRM-Project_final/descriptive.py:367: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+c:\Users\andre\Desktop\Computational Finance\2nd year\Quant. Fin. RIsk\QRM-Project\descriptive.py:367: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   plt.show()
