@@ -1,5 +1,5 @@
 """Points 3-4 - GARCH estimation, static one-step-ahead forecasts, Gaussian VaR."""
-import os, re
+import os
 import numpy as np, pandas as pd
 import matplotlib.pyplot as plt
 from arch import arch_model
@@ -196,75 +196,6 @@ def var_from_forecasts(fc, alphas=ALPHAS):
     """VaR = mu + sigma * q_alpha (return quantile, negative number)."""
     return pd.DataFrame({a: fc["mu"] + fc["sigma"] * fc[f"q_{a}"] for a in alphas})
 
-# ---- report tables: the tables of report Sections 4-5, already formatted (copy-paste into Word)
-NAMES = {"Nestle": "Nestlé", "SwissRe": "Swiss Re", "SwissLife": "Swiss Life", "HelvetiaBaloise": "Helvetia Baloise"}
-LABEL = {"GARCH(1,0,1)": "GARCH(1,1)", "GJR-GARCH(1,1,1)": "GJR(1,1)", "GJR-GARCH(1,2,1)": "GJR(1,2,1)",
-         "EGARCH(1,1,1)": "EGARCH(1,1)", "APARCH(1,1,1)": "APARCH(1,1)"}
-nm = lambda s: NAMES.get(s, s)
-pv = lambda x: "<0.001" if x < 0.001 else f"{x:.3f}"                 # p-value as printed in the report
-cp = lambda c, p: "–" if pd.isna(c) else f"{c:.3f} ({pv(p)})"        # "coefficient (p-value)"
-
-def report_tables(w, candidates, models, Z_diag, z_norm, ic, best, summary, out="outputs/tables/report"):
-    """Writes Tables 4.1-4.4 and 5.1-5.3 of the report exactly as they appear in Word."""
-    os.makedirs(out, exist_ok=True)
-    # Table 4.1 - weights of PORT and of the stocks in the index
-    t = pd.DataFrame({"Stock": [nm(s) for s in w.index], "PORT weight (%)": (w * 100).values,
-                      "Index weight (%)": [INDEX_WEIGHT[s] for s in w.index]}).sort_values("PORT weight (%)", ascending=False)
-    t.loc[len(t)] = ["Total", t["PORT weight (%)"].sum(), t["Index weight (%)"].sum()]
-    for col in ["PORT weight (%)", "Index weight (%)"]: t[col] = t[col].map(lambda x: f"{x:.2f}")
-    t.to_csv(f"{out}/Table_4_1_weights.csv", index=False)
-    # Table 4.2 - model selection: candidates, chosen model, gamma, Delta BIC vs GARCH(1,1), joint test before/after
-    rows = []
-    for s, c in candidates.groupby(level="series", sort=False):
-        c = c.droplevel("series"); base, ch = c.loc["GARCH(1,0,1)"], c[c["chosen"]].iloc[0]; chm = c.index[c["chosen"]][0]
-        rows.append({"Series": nm(s), "Joint p GARCH(1,1)": pv(base["joint_p"]),
-                     "Candidates estimated": ", ".join(LABEL[m] for m in c.index if m != "GARCH(1,0,1)") or "–",
-                     "Chosen model": LABEL[chm], "γ (p-value)": cp(ch["gamma"], ch["gamma_p"]),
-                     "ΔBIC vs GARCH(1,1)": "–" if chm == "GARCH(1,0,1)" else f"{ch['BIC'] - base['BIC']:.1f}",
-                     "Joint p chosen": pv(ch["joint_p"])})
-    pd.DataFrame(rows).to_csv(f"{out}/Table_4_2_model_selection.csv", index=False)
-    # Table 4.3 - in-sample estimates "coefficient (p-value)" and persistence
-    chosen = candidates[candidates["chosen"]].reset_index(level="model")["model"]
-    t = pd.DataFrame({"Series": [nm(s) for s in models.index], "Model": [LABEL[chosen[s]] for s in models.index]})
-    for col, k in [("μ", "mu"), ("ω", "omega"), ("α", "alpha[1]"), ("β", "beta[1]"), ("γ", "gamma[1]"), ("δ", "delta")]:
-        t[col] = [cp(models.loc[s].get(k, np.nan), models.loc[s].get(f"{k}_p", np.nan)) for s in models.index]
-    t["Persist."] = models["persistence"].map(lambda x: f"{x:.3f}").values
-    t.to_csv(f"{out}/Table_4_3_parameters.csv", index=False)
-    # Table 4.4 - diagnostics on Z (p-values)
-    t = pd.DataFrame({"Series": [nm(s) for s in Z_diag.index], "Model": Z_diag["model"].str.replace("GJR-GARCH", "GJR").values,
-                      "ACF1 Z": Z_diag["ACF1_Z"].map(lambda x: f"{x:.3f}").values})
-    for col, k in [("LB(10) Z", "LB10_Z_p"), ("LB(10) Z²", "LB10_Z2_p"), ("ARCH-LM(10)", "ARCH_LM10_p"), ("Sign bias", "sign_bias_p"),
-                   ("Neg. size", "neg_size_bias_p"), ("Pos. size", "pos_size_bias_p"), ("Joint", "joint_p")]:
-        t[col] = Z_diag[k].map(pv).values
-    t.to_csv(f"{out}/Table_4_4_Z_diagnostics.csv", index=False)
-    # Table 5.1 - moments and normality tests of Z
-    t = pd.DataFrame({"Series": [nm(s) for s in z_norm.index], "Model": Z_diag.loc[z_norm.index, "model"].str.replace("GJR-GARCH", "GJR").values,
-                      "Skewness": z_norm["skew"].astype(float).map(lambda x: f"{x:.2f}").values,
-                      "Excess kurtosis": z_norm["ex_kurt"].astype(float).map(lambda x: f"{x:.2f}").values,
-                      "Jarque–Bera p": z_norm["JB_p"].astype(float).map(pv).values, "KS vs N(0,1) p": z_norm["KS_norm_p"].astype(float).map(pv).values})
-    t.to_csv(f"{out}/Table_5_1_Z_normality.csv", index=False)
-    # Table 5.2 - BIC under four densities, chosen density, nu of the t and lambda of the skew-t
-    b = ic["BIC"].unstack("dist").reindex(best.index); sh = ic["shape"]          # keep the order of the series
-    t = pd.DataFrame({"Series": [nm(s) for s in b.index]})
-    for col, d in [("BIC Normal", "normal"), ("BIC t", "t"), ("BIC skew-t", "skewt"), ("BIC GED", "ged")]: t[col] = b[d].round(0).astype(int).values
-    t["Chosen"] = best.loc[b.index].str.replace("skewt", "skew-t").values
-    t["ν (t)"] = [re.search(r"nu=([\d.]+)", sh[(s, "t")]).group(1) for s in b.index]
-    t["λ skew-t (p)"] = [re.search(r"lambda=(-?[\d.]+) \(p=([\d.]+)\)", sh[(s, "skewt")]).expand(r"\1 (\2)") for s in b.index]
-    t.to_csv(f"{out}/Table_5_2_densities.csv", index=False)
-    # Table 5.3 - out-of-sample VaR Case 1 vs Case 2: average VaR and violations
-    g = pd.DataFrame(summary); rows = []
-    for s in dict.fromkeys(g["series"]):
-        r5, r1 = (g[(g.series == s) & (g.alpha == a)].iloc[0] for a in (0.05, 0.01))
-        rows.append({"Series": nm(s), "Density": r5.case2_dist.replace("skewt", "skew-t"),
-                     "5%: avg VaR C1": f"{r5.avg_VaR_case1:.2f}", "5%: avg VaR C2": f"{r5.avg_VaR_case2:.2f}",
-                     "5%: viol. C1 / C2": f"{r5.hits_case1} / {r5.hits_case2}",
-                     "1%: avg VaR C1": f"{r1.avg_VaR_case1:.2f}", "1%: avg VaR C2": f"{r1.avg_VaR_case2:.2f}",
-                     "1%: viol. C1 / C2": f"{r1.hits_case1} / {r1.hits_case2}"})
-    tot = {a: g[g.alpha == a][["hits_case1", "hits_case2"]].sum() for a in (0.05, 0.01)}
-    rows.append({"Series": "Total", "5%: viol. C1 / C2": f"{tot[0.05].hits_case1} / {tot[0.05].hits_case2}",
-                 "1%: viol. C1 / C2": f"{tot[0.01].hits_case1} / {tot[0.01].hits_case2}"})
-    pd.DataFrame(rows).fillna("").to_csv(f"{out}/Table_5_3_var_case1_case2.csv", index=False)
-
 if __name__ == "__main__":
     # remove the tables written by older versions of this script (no longer produced)
     for f in ["G0b_chosen_orders_pre_refinement", "G0c_asymmetry_candidates", "G1_garch_parameters_pre_refinement",
@@ -294,11 +225,13 @@ if __name__ == "__main__":
         fits[column] = res
         param_tables(models, column, res)
         Z[column] = std_resid(res)
-    candidates = pd.concat(candidates, names=["series", "model"])           # TABLE G0c: every candidate, chosen = True
+    candidates = pd.concat(candidates, names=["series", "model"])           
+    base_bic = candidates.xs("GARCH(1,0,1)", level="model")["BIC"]                         
+    candidates["dBIC_vs_GARCH11"] = candidates["BIC"].values - base_bic.loc[candidates.index.get_level_values("series")].values
     print(candidates.round(4).to_string())
     candidates.to_csv("outputs/tables/G0c_model_candidates.csv")
     Z_diagnostic = table_serial_z(Z, lags=10)
-    orders_pre = {c: ("GARCH", 1, 0, 1) for c in r}                     # GARCH(1,1) benchmark, for density_asymmetry_check
+    orders_pre = {c: ("GARCH", 1, 0, 1) for c in r}                     
 
     #Save output
     models.to_csv("outputs/tables/G1_garch_parameters.csv")# TABLE G1: GARCH parameters and p-values (point 3, significance)
@@ -355,7 +288,7 @@ if __name__ == "__main__":
     fig.suptitle("Fig G2b - QQ-plots of standardised residuals vs the chosen density"); fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/G2b_Z_qqplots_chosen_density.png", dpi=150)
 
-    # Personal check, not part of the outputs: uncomment to see if the asymmetry left depends on the Gaussian density
+    # check to see if the asymmetry left depends on the Gaussian density
     print(density_asymmetry_check(r, orders_pre, orders, best).round(4).to_string())
 
     #Same forecasts with the chosen density in the GARCH -> VaR Case 2; comparison with Case 1 (TABLE G5)
@@ -370,7 +303,7 @@ if __name__ == "__main__":
         for a in ALPHAS:
             f[f"VaR_case1_{a}"] = v1[a]; f[f"VaR_case2_{a}"] = v2[a]
         f.to_csv(f"{FC_DIR}/{c}.csv")
-        for a in ALPHAS:                                             # quick check; full backtests are Point 8
+        for a in ALPHAS:                                             
             summary.append({"series": c, "alpha": a, "n_oos": len(f), "expected_hits": a * len(f),
                             "hits_case1": int((f["ret"] < f[f"VaR_case1_{a}"]).sum()),
                             "hits_case2": int((f["ret"] < f[f"VaR_case2_{a}"]).sum()),
@@ -418,5 +351,3 @@ if __name__ == "__main__":
     print(f"\nPlausibility check: {len(g6)} of {2 * len(r) * len(range(0, len(f), H_REFIT))} re-estimations rejected")
     print(g6.drop(columns=["params_rejected", "params_kept"]).to_string(index=False) if len(g6) else "none")
 
-    # Report Tables 4.1-4.4 and 5.1-5.3, formatted as in Word (outputs/tables/report)
-    report_tables(w, candidates, models, Z_diagnostic, z_normality(Z), ic, best, summary)
