@@ -9,5 +9,4 @@
 | backtest.py | 8 | members A+B |
 | es.py | 9 | member A |
 
-Put the LSEG export in data/prices_raw.csv, run `pip install -r requirements.txt` then `python main.py`.
-Use `pip freeze` at the end and note the Python version in the report for reproducibility.
+
