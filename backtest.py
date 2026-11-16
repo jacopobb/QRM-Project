@@ -44,6 +44,7 @@ TABLE_DIR, FIG_DIR = "outputs/tables", "outputs/figures"      # overridden by --
 
 
 def save_table(df, name, digits=4):
+    # prints the table rounded for reading, and saves it with 6 decimals so that the report can be checked against it
     print(f"\n=== {name} ===\n", df.round(digits).to_string())
     if SAVE:
         df.round(6).to_csv(f"{TABLE_DIR}/{name}.csv")
@@ -67,26 +68,26 @@ def label(m):
 def var_column(d, m, a):
     """Name of the column VaR_<m>_<a> in d, whatever the number format of alpha (0.05, .05), or None."""
     name = f"VaR_{m}_{a:g}"
-    if name in d:
+    if name in d:                            # usual case: the name written by garch_models.py / evt.py
         return name
-    for c in d:
+    for c in d:                              # otherwise compare alpha as a number, not as a string
         mt = VAR_PATTERN.match(c)
         if mt and mt.group(1) == m and np.isclose(float(mt.group(2)), a):
             return c
-    return None
+    return None                              # this model has no VaR at this alpha for this series
 
 
 def load_series(folder):
     """Return {series: DataFrame(ret, VaR_<model>_<alpha> ...)} and the detected (models, alphas)."""
-    files = sorted(glob.glob(os.path.join(folder, "*.csv")))
+    files = sorted(glob.glob(os.path.join(folder, "*.csv")))            # one file per series (16 stocks + PORT)
     if not files:
         raise FileNotFoundError(f"no CSV files in {folder}")
     data, models, alphas = {}, set(), set()
     for f in files:
         d = pd.read_csv(f, index_col=0, parse_dates=True)
-        rc = next((c for c in d.columns if c.lower() in RET_NAMES), None)
+        rc = next((c for c in d.columns if c.lower() in RET_NAMES), None)          # realised-return column
         vc = {c: VAR_PATTERN.match(c) for c in d.columns}
-        vc = {c: m for c, m in vc.items() if m}                  # keep only the VaR columns (mu, sigma, ES are dropped)
+        vc = {c: m for c, m in vc.items() if m}                                    # keep only the VaR columns (mu, sigma, ES are dropped)
         if rc is None or not vc:
             print(f"  skipped {os.path.basename(f)} (no return / VaR columns)")
             continue
@@ -106,12 +107,13 @@ def hit_stats(d, m, a):
     x = d[["ret", col]].dropna()                                      # only days with both a return and a VaR forecast
     r, v = x["ret"], x[col]
     hits = r < v                                                      # violation: return below the predicted VaR
-    T = len(x)
+    T = len(x)                                                        # out-of-sample days
     excess = (r - v)[hits]                                            # by how much the return is below the VaR (< 0)
     # expected number of violations of a correct VaR = alpha * T (12.5 at 5%, 2.5 at 1%);
     # hits/expected = 1 means the hit rate equals alpha, > 1 too many violations, < 1 too few (conservative VaR)   
     return {"T": T, "expected_hits": a * T, "hits": int(hits.sum()), "hit_rate_%": 100 * hits.mean(),
             "hits/expected": hits.sum() / (a * T),
+            # a hit on day t that follows a hit on day t-1: descriptive signal of violations clustered in time
             "consecutive_hits": int((hits & hits.shift(1, fill_value=False)).sum()),   # hits that follow a hit
             "avg_VaR_%": v.mean(),
             # size of the violations: average and worst distance of the return below the VaR (NaN if no violation)
@@ -154,6 +156,7 @@ def main():
             for i, m in enumerate(models):
                 c = var_column(d, m, a)
                 if c:
+                    # the number of violations of each model is written in the legend
                     ax.plot(d[c], lw=1, color=cols[i % 10], label=f"{label(m)} ({int((d['ret'] < d[c]).sum())} hits)")
             ax.set_title(f"{s} - VaR {a:.0%}, expected hits {a * len(d):.1f}")
             ax.legend(fontsize=7, ncol=3)
@@ -173,7 +176,7 @@ def main():
     save_table(full, "T8.1_backtest_all")
 
     # Table 8.2a, 8.2b: number of violations, series x model, one table per alpha
-    present = [label(m) for m in models if label(m) in full.index.get_level_values("model")]
+    present = [label(m) for m in models if label(m) in full.index.get_level_values("model")]    # column order C1 ... C5
     for a in alphas:
         fa = full.xs(a, level="alpha")
         w = fa["hits"].unstack("model")[present]                                         # rows = series, columns = models
@@ -191,7 +194,7 @@ def main():
         avg_VaR=("avg_VaR_%", "mean"), avg_excess=("avg_excess_%", "mean"))
     summ["hits/expected"] = summ["total_hits"] / summ["expected_total"]
     summ["hit_rate_%"] = 100 * summ["total_hits"] / summ["total_T"]
-    save_table(summ.sort_index(ascending=[False, True]), "T8.3_summary_all_series", 3)
+    save_table(summ.sort_index(ascending=[False, True]), "T8.3_summary_all_series", 3)      # 5% first, then 1%
 
     # Fig 8.2: number of violations by model, focus series, with the expected number
     fig, axes = plt.subplots(len(alphas), 1, figsize=(12, 3.8 * len(alphas)), squeeze=False)
@@ -201,7 +204,7 @@ def main():
             hv = [full.loc[(s, a, label(m)), "hits"] if (s, a, label(m)) in full.index else np.nan for m in models]
             ax.bar(x + j * wdt, hv, wdt, label=s)
         ax.axhline(a * len(d0), color="k", ls="--", label="expected")
-        ax.set_xticks(x + .4 - wdt / 2); ax.set_xticklabels([label(m) for m in models], fontsize=8)
+        ax.set_xticks(x + .4 - wdt / 2); ax.set_xticklabels([label(m) for m in models], fontsize=8)      # ticks at the centre of each group
         ax.set_title(f"alpha = {a:g}"); ax.legend(fontsize=8)
     fig.suptitle("Fig 8.2 - Number of VaR violations by model")
     fig.tight_layout(); save_fig(fig, "F8.2_hits_bar")
