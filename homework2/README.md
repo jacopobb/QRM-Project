@@ -10,6 +10,7 @@ cd homework2
 python main_hw2.py            # whole pipeline (about 20-30 min on a laptop); python main_hw2.py --list for the steps
 python main_hw2.py --from backtest   # re-run only the evaluation once the VaR forecasts exist
 ```
+The code runs unchanged on macOS and Windows (on Windows use `py` instead of `python` if `python` is not found).
 
 ## 1. Data to add before running (folder `homework2/data/`)
 | File | Content | Source | Who |
@@ -84,6 +85,18 @@ professor's questions on it (anyone may be asked about the choices of §4). **Re
 
 Review pairs: **A ↔ D** and **B ↔ C**.
 
+### Why this split
+- **A – data and unconditional models (1–8), then ES (Point 4).** Most of these models are already in the shared
+  course code, so A finishes early. The same fitted distributions give the ES almost directly, so Point 4 is a natural
+  continuation.
+- **B – GARCH family (9–15, 20) and Point 3.** One person owns the GARCH filter, and both Point 3 and the commentary on
+  the VaR evolution reuse it.
+- **C – factor models (16–19, 21, bonus 22+).** This is the most technically separate block and it needs no data from
+  the others. It is also the heaviest, so C gets no additional point.
+- **D – backtesting (Point 2) and integration.** The tests only need the agreed output format, so D is never blocked
+  waiting for the models. The integrator has to read everyone's results anyway, which suits writing the comparison
+  across models.
+
 ### Report files → who writes them
 | File | Section | Responsible | Reviewer |
 |---|---|---|---|
@@ -121,7 +134,7 @@ Review pairs: **A ↔ D** and **B ↔ C**.
 - `make_tables.py` (last step of `main_hw2.py`) writes `report/tables/` and copies the figures to `report/figures/`:
   never edit them by hand. Until the pipeline has been run, red boxes replace the missing tables and figures.
 - Red `\todo{...}` placeholders mark the text still to write: remove them all before submitting.
-- Step-by-step guide for VS Code + GitHub (installation, compiling, daily git workflow): `report/README.md`.
+- Step-by-step guide for VS Code + GitHub (installation on **Mac and Windows**, compiling, daily git workflow): `report/README.md`.
 
 ## 7. Report checklist (from the assignment)
 - Comment every table/figure statistically **and** economically; summaries for the 16 stocks, detail for EWP and SMI.
