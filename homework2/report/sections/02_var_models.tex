@@ -1,0 +1,61 @@
+% !TEX root = ../main.tex
+% Responsible: A (2.1) and B (2.2-2.3) -- Reviewer: C   (see homework2/README.md, Division of work)
+\section{VaR models (Point 1)}\label{sec:models}
+
+Table~\ref{tab:models} lists the 21 models. Models 1--15 are estimated for every series, models 16--21 only for the
+stocks and the EWP, as required.
+\inputtable{tab_models}
+
+\subsection{Unconditional models (1--8, i.i.d.\ returns)}
+\begin{itemize}
+  \item \textbf{Historical Simulation (1)}: $\VaR_t^\alpha$ is the empirical $\alpha$-quantile of the last $W$ returns.
+  \item \textbf{Parametric (2--4)}: Normal, Student-$t$ and Generalized Hyperbolic \citep{barndorff1977} distributions
+        fitted by maximum likelihood on the window; the VaR is the $\alpha$-quantile of the fitted distribution.
+  \item \textbf{Cornish--Fisher (5)} \citep{cornish1938}: $\VaR_t^\alpha = \hat\mu + \hat\sigma\, z_{CF}$, with
+  \begin{equation}\label{eq:cf}
+    z_{CF} = z_\alpha + \frac{(z_\alpha^2-1)S}{6} + \frac{(z_\alpha^3-3z_\alpha)K}{24} - \frac{(2z_\alpha^3-5z_\alpha)S^2}{36},
+  \end{equation}
+  where $S$ and $K$ are the sample skewness and excess kurtosis of the window.
+  \item \textbf{GEV (6--7)} \citep{embrechts1997}: a GEV distribution $G_{\xi,\mu,\sigma}$ is fitted to the monthly
+        (21-day) maxima of the losses $L_t=-r_t$. If daily losses have distribution $F$ and extremal index $\theta$,
+        then $F^{m\theta} \approx G$, so the loss quantile is $x_p = G^{-1}(p^{m\theta})$ with $p = 1-\alpha$ and
+        $m=21$; model 6 sets $\theta = 1$, model 7 uses the blocks estimator
+        $\hat\theta = \log(1-G_u)/(m\log(1-N_u))$ with threshold $u$ at the 95\% loss quantile.
+  \item \textbf{GPD (8)}: a Generalized Pareto distribution $(\xi,\beta)$ is fitted to the excesses over $u$, the 90\%
+        quantile of the losses, and
+        $x_p = u + \frac{\beta}{\xi}\big[(\alpha\, T/N_u)^{-\xi}-1\big]$, with $N_u$ exceedances out of $T$ losses.
+\end{itemize}
+
+\subsection{Conditional models (9--15, 20)}
+All the ARMA-GARCH models share the same AR(1)-GJR-GARCH(1,1) specification \citep{glosten1993}:
+\begin{equation}\label{eq:garch}
+  r_t = c + \phi r_{t-1} + \varepsilon_t,\qquad \varepsilon_t=\sigma_t z_t,\qquad
+  \sigma_t^2 = \omega + (\alpha_1 + \gamma\,\1\{\varepsilon_{t-1}<0\})\,\varepsilon_{t-1}^2 + \beta\sigma_{t-1}^2 ,
+\end{equation}
+with $z_t$ i.i.d.\ with zero mean and unit variance. The VaR is $\VaR_t^\alpha = \mu_t + \sigma_t\, q_\alpha(z)$,
+and the seven models differ only in the quantile $q_\alpha(z)$ of the innovations: Normal (9), unit-variance
+Student-$t$ with estimated degrees of freedom (10), empirical quantile of the standardised residuals, i.e.\
+Filtered Historical Simulation \citep{barone1999} (11), Cornish--Fisher on the moments of $z$ (12), GEV without and
+with extremal index (13--14) and GPD (15) fitted to the losses $-z$ \citep{mcneil2000}. Model 10 is estimated by
+Student-$t$ maximum likelihood, the others by Gaussian quasi-maximum likelihood.
+\todo{justify the GJR specification with the asymmetry found in Homework 1.}
+
+\textbf{EWMA (20)}: $\mu_{t+1} = \lambda\mu_t + (1-\lambda)r_t$, $\sigma^2_{t+1} = \lambda\sigma^2_t + (1-\lambda)(r_t-\mu_t)^2$
+with $\lambda = 0.94$ \citep{riskmetrics1996}, and Gaussian quantile.
+
+\subsection{Factor models (16--19, 21)}
+Each stock is mapped on the five factors by OLS on the window, $r_{i,t} = a_i + \bm b_i'\bm f_t + e_{i,t}$; the EWP
+has $\bm b_{EWP} = \frac1{16}\sum_i \bm b_i$. Each factor follows the AR(1)-GJR-GARCH of~\eqref{eq:garch} and the
+correlation of the standardised factor residuals is either constant, CCC \citep{bollerslev1990}, or DCC(1,1)
+\citep{engle2002}. With $\bm\Sigma_{f,t}$ the predicted factor covariance:
+\begin{itemize}
+  \item \textbf{Gaussian (16--17)}: $\VaR_{i,t}^\alpha = a_i + \bm b_i'\bm\mu_{f,t} + z_\alpha\sqrt{\bm b_i'\bm\Sigma_{f,t}\bm b_i + s^2_{e,i}}$,
+        including the idiosyncratic variance $s^2_{e,i}$ (for the EWP, $\bm w'\widehat{\mathrm{Cov}}(\bm e)\bm w$).
+  \item \textbf{FHS (18--19)}: the factor innovations are devolatilised and decorrelated with the Cholesky factor of
+        $\bm R_s$, resampled together with the mapping residuals of the same day, and recombined with the
+        volatilities and correlation predicted for day $t$; the VaR is the empirical quantile of 10{,}000 simulated returns.
+  \item \textbf{Model 21}: $X_{i,t} = \bm b_i'\bm f_t$ is modelled with an AR(1)-GJR-GARCH(1,1) with skewed-$t$
+        innovations \citep{hansen1994}, and the VaR of $X_{i,t}$ is used as VaR of the stock. Since $X$ contains no
+        idiosyncratic risk, we expect too many violations for single stocks.
+\end{itemize}
+\todo{choice to discuss: factors are in USD and returns in CHF.}

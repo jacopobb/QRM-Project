@@ -63,7 +63,43 @@ VaR is always a **return quantile** (negative, %): violation on day *t* ⇔ `ret
   cite it as taken from the literature.
 - The EWMA (M20) is also computed for the index (the assignment requires 15 models for the index, we report 16).
 
-## 5. Report checklist (from the assignment)
+## 5. Division of work (replace A, B, C, D with the names, also in `report/sections/00_roles.tex`)
+The assignment asks who took care of each point and with which role. **Responsible** = understands and runs the code
+of the point, checks its results, writes the section and answers the professor's questions on it (the professor may
+ask any member to justify the choices of README §4). **Reviewer** = re-reads results and text of the section.
+
+| Member | Points | Code to own (must be able to explain it) | Report files | Other tasks | Reviews |
+|---|---|---|---|---|---|
+| **A** | Data; Point 1: models 1–8, 20; Point 1 comment (VaR dynamics, local/global shocks) | `var_iid.py`, `var_evt.py`, `var_plots.py`, `common.py` | `01_data.tex`, `02_var_models.tex` §2.1 + EWMA, `03_var_dynamics.tex` | download SMI (LSEG) and Fama-French factors; check the event dates of the figures | `04_backtesting.tex` (C) |
+| **B** | Point 1: models 9–19, 21; Point 3 (10-day VaR) | `garch_core.py`, `var_garch.py`, `var_factors.py`, `var_10d.py` | `02_var_models.tex` §2.2–2.3, `05_var10.tex` | ask the professor about CHF returns vs USD factors | `01_data.tex` (A), `06_es.tex` (D) |
+| **C** | Point 2 (backtesting) | `tests_lib.py` (VaR tests, DM, MCS), `backtest_var.py` | `04_backtesting.tex` | check the Berkowitz test against the course slides | `02_var_models.tex` (A, B), `05_var10.tex` (B) |
+| **D** | Point 4 (ES); final report | `es_hw2.py`, `tests_lib.py` (ES loss), `main_hw2.py`, `report/make_tables.py` | `06_es.tex`, `07_conclusions.tex`, `08_ai.tex`, `00_roles.tex`, `main.tex`, `references.bib` | final run of the pipeline with the real data, commit of `report/tables` and `report/figures`, final PDF | `03_var_dynamics.tex` (A) |
+
+Everybody: collect the prompts used with AI tools and send them to D for `08_ai.tex`.
+
+### Report files → who writes them
+| File | Section | Responsible | Reviewer |
+|---|---|---|---|
+| `sections/00_roles.tex` | Contribution of the members | D | all |
+| `sections/01_data.tex` | 1. Data and setup | A | B |
+| `sections/02_var_models.tex` | 2. VaR models (Point 1): §2.1 + EWMA / §2.2–2.3 | A / B | C |
+| `sections/03_var_dynamics.tex` | 3. Evolution of the VaR (Point 1, comment) | A | D |
+| `sections/04_backtesting.tex` | 4. Backtesting (Point 2) | C | A |
+| `sections/05_var10.tex` | 5. 10-day VaR (Point 3) | B | C |
+| `sections/06_es.tex` | 6. Expected Shortfall (Point 4) | D | B |
+| `sections/07_conclusions.tex` | 7. Conclusions | D (with input from all) | all |
+| `sections/08_ai.tex` | 8. Use of AI tools | D | all |
+| `sections/09_appendix.tex` | Appendix | D | – |
+
+## 6. LaTeX report (`report/`)
+- `main.tex` joins all the section files with `\input`: nobody merges files by hand, compiling `main.tex` gives the whole PDF.
+- Each member edits **only their own section files**; `main.tex`, `00_roles.tex`, `08_ai.tex` are edited by D only.
+- `make_tables.py` (last step of `main_hw2.py`) writes `report/tables/` and copies the figures to `report/figures/`:
+  never edit them by hand. Until the pipeline has been run, red boxes replace the missing tables and figures.
+- Red `\todo{...}` placeholders mark the text still to write: remove them all before submitting.
+- Step-by-step guide for VS Code + GitHub (installation, compiling, daily git workflow): `report/README.md`.
+
+## 7. Report checklist (from the assignment)
 - Comment every table/figure statistically **and** economically; summaries for the 16 stocks, detail for EWP and SMI.
 - Group members and roles for every point. Section on AI use (tools, purpose, prompts, where they were used).
 - The code must reproduce every number: run `main_hw2.py` once at the end, from a clean `outputs/`.

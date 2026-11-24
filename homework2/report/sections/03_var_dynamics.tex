@@ -1,0 +1,39 @@
+% !TEX root = ../main.tex
+% Responsible: A -- Reviewer: D   (see homework2/README.md, Division of work)
+\section{Evolution of the VaR (Point 1, comment)}\label{sec:dynamics}
+
+Figures~\ref{fig:var_SMI}--\ref{fig:var_UBS} show the 1\% VaR of three groups of models for the SMI, the EWP and
+UBS (the 5\% VaR is in the Appendix). Tables~\ref{tab:dyn_SMI}--\ref{tab:dyn_UBS} summarise the dynamics: spikes
+(largest one-day change), staleness (share of days on which the VaR does not change) and how fast the VaR follows
+the realised volatility.
+
+\begin{figure}[H]\centering
+\safegraphics[width=\linewidth]{F1.1_var_SMI_0.01.png}
+\caption{SMI: daily returns and 1\% VaR; dots are violations, dotted lines market events.}\label{fig:var_SMI}
+\end{figure}
+\begin{figure}[H]\centering
+\safegraphics[width=\linewidth]{F1.1_var_EWP_0.01.png}
+\caption{EWP: daily returns and 1\% VaR.}\label{fig:var_EWP}
+\end{figure}
+\begin{figure}[H]\centering
+\safegraphics[width=\linewidth]{F1.1_var_UBS_0.01.png}
+\caption{UBS: daily returns and 1\% VaR.}\label{fig:var_UBS}
+\end{figure}
+
+\inputtable{tab_dyn_SMI}
+\inputtable{tab_dyn_EWP}
+\inputtable{tab_dyn_UBS}
+
+\todo{comment, statistically and economically: (i) unconditional models (HS, EVT) are almost flat and react only
+when an extreme day enters or leaves the window (high share of unchanged days, low correlation with volatility);
+(ii) conditional models follow the volatility with a lag of 0--1 days; (iii) spikes and their dates; (iv) Cornish--Fisher
+at 1\% with very large kurtosis; (v) differences between index, EWP and UBS (Credit Suisse crisis, March 2023).}
+
+\subsection{Local and global shocks}
+Table~\ref{tab:viol_dates} lists the days with the most simultaneous violations; Table~\ref{tab:local_global} splits
+the violations of each stock in local (one or two stocks), mixed and global (index or EWP violating, or at least 8
+stocks) shocks.
+\inputtable{tab_viol_dates}
+\inputtable{tab_local_global}
+\todo{comment: which events produce global violations; which stocks have mostly idiosyncratic violations and why
+(e.g.\ UBS and the Credit Suisse takeover, Helvetia--Baloise merger, company news); check the event dates.}

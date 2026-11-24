@@ -1,0 +1,25 @@
+% !TEX root = ../main.tex
+% Responsible: A -- Reviewer: B   (see homework2/README.md, Division of work)
+\section{Data and setup}\label{sec:data}
+
+\paragraph{Series.} The analysis covers the 16 Swiss large caps of Homework~1 (Roche, Novartis, Nestl\'e, UBS, ABB,
+Zurich, Richemont, Swiss Re, Lonza, Givaudan, Holcim, Sika, Swiss Life, Geberit, Swisscom, Helvetia Baloise), their
+equally weighted portfolio (EWP) and the Swiss Market Index (SMI, LSEG RIC \texttt{.SSMI}). Returns are daily log
+returns in percent, $r_t = 100\,\log(P_t/P_{t-1})$, in Swiss francs, from 27/09/2011 to 30/09/2026. The EWP return is the
+simple average of the 16 log returns, as in Homework~1. For the factor models we use the daily Fama--French Europe
+five factors \citep{fama2015} (market, size, value, profitability, investment) from the Kenneth French data library.
+\todo{descriptive statistics of the SMI and comparison with the EWP; check of the factor data (dates, currency).}
+
+\paragraph{Backtesting design.} The backtesting sample is 1/10/2021--30/09/2026 (1{,}256 trading days). For every day $t$
+of this sample the VaR is forecast with information up to $t-1$ only:
+\begin{itemize}
+  \item rolling window of 5 years ($W = 1{,}260$ days) for all models except the i.i.d.\ EVT models;
+  \item expanding window (all data from September 2011 to $t-1$) for the i.i.d.\ GEV and GPD models (6--8);
+  \item parameters re-estimated every day; each estimation starts from the previous day's estimate (warm start).
+\end{itemize}
+VaR is expressed as a quantile of the return distribution, so it is a negative number and a violation (hit) occurs
+when $r_t < \VaR_t^\alpha$, with hit indicator $I_t = \1\{r_t < \VaR_t^\alpha\}$. We consider $\alpha = 1\%$ and $5\%$.
+
+\paragraph{Code.} The whole analysis is produced by the Python code in the folder \texttt{homework2} of the group
+repository; \texttt{main\_hw2.py} runs all the steps and every table of this report is generated from the results.
+Random numbers (Filtered Historical Simulation, bootstrap) use a fixed seed, so the numbers are reproducible.

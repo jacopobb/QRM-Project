@@ -1,0 +1,46 @@
+% !TEX root = ../main.tex
+% Responsible: C -- Reviewer: A   (see homework2/README.md, Division of work)
+\section{Backtesting (Point 2)}\label{sec:backtesting}
+
+\subsection{Tests and loss functions}
+With $n$ backtest days, $n_1$ hits and $\hat\pi = n_1/n$:
+\begin{itemize}
+  \item \textbf{Unconditional coverage} \citep{kupiec1995}:
+        $LR_{UC} = -2\log\frac{(1-\alpha)^{n-n_1}\alpha^{n_1}}{(1-\hat\pi)^{n-n_1}\hat\pi^{n_1}} \sim \chi^2_1$.
+  \item \textbf{Independence and conditional coverage} \citep{christoffersen1998}: the hits follow a first-order Markov
+        chain with transition probabilities $\pi_{01},\pi_{11}$; $LR_{IND}$ tests $\pi_{01}=\pi_{11}$ ($\chi^2_1$) and
+        $LR_{CC} = LR_{UC} + LR_{IND} \sim \chi^2_2$.
+  \item \textbf{Berkowitz independence test} \citep{berkowitz2011}: Ljung--Box statistic with 5 lags on the
+        demeaned hit sequence $I_t - \alpha$, $\chi^2_5$ under independence.
+  \item \textbf{Dynamic Quantile} \citep{engle2004}: regression of $Hit_t = I_t-\alpha$ on a constant, $Hit_{t-1},\dots,Hit_{t-4}$
+        and $\VaR_t$; $DQ = \hat{\bm\beta}'\bm X'\bm X\hat{\bm\beta}/(\alpha(1-\alpha)) \sim \chi^2_6$.
+  \item \textbf{Diebold--Mariano} \citep{diebold1995}: each model against Historical Simulation, with the tick loss
+        $L_t = (\alpha - I_t)(r_t - \VaR_t)$ \citep{gonzalez2004}, strictly consistent for the quantile, and the Lopez
+        magnitude loss $L_t = I_t\,[1 + (r_t-\VaR_t)^2]$ \citep{lopez1999}; Newey--West variance.
+  \item \textbf{Model Confidence Set} \citep{hansen2011}: $T_{\max}$ statistic on the tick loss, 90\% confidence,
+        circular block bootstrap with $B = 1{,}000$ replications and blocks of 10 days.
+\end{itemize}
+
+\subsection{EWP and SMI}
+\inputtable{tab_bt_EWP_0.01}
+\inputtable{tab_bt_EWP_0.05}
+\inputtable{tab_bt_SMI_0.01}
+\inputtable{tab_bt_SMI_0.05}
+\todo{detailed comment for the EWP and the SMI: coverage, independence (clusters of violations), DM and MCS; economic
+reading (e.g.\ i.i.d.\ models fail the independence tests because volatility clusters; normal innovations
+underestimate the 1\% tail).}
+
+\subsection{The 16 stocks}
+\inputtable{tab_assets_0.01}
+\inputtable{tab_assets_0.05}
+\todo{summary comment for the stocks.}
+
+\subsection{Which model wins most often?}
+\inputtable{tab_ranking}
+\todo{answer the question of the assignment, with statistical and economic reasons.}
+
+\subsection{Results by calendar year}
+\inputtable{tab_years_mcs_0.01}
+\inputtable{tab_years_mcs_0.05}
+\todo{do the conclusions change from year to year? Link to the market regimes (2022 rates and war, 2023 banking
+crisis, calm 2024 with the August sell-off, 2025 tariffs). The violation rates by year are in the Appendix.}

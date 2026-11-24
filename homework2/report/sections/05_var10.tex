@@ -1,0 +1,26 @@
+% !TEX root = ../main.tex
+% Responsible: B -- Reviewer: C   (see homework2/README.md, Division of work)
+\section{10-day VaR (Point 3)}\label{sec:var10}
+
+For the EWP and the SMI we estimate the AR(1)-GJR-GARCH(1,1) of~\eqref{eq:garch} on the rolling window and simulate
+10{,}000 paths of 10 days, drawing the innovations from the standardised residuals of the window and updating the
+conditional mean and variance along each path (Filtered Historical Simulation). The 10-day VaR is the $\alpha$-quantile
+of the simulated cumulative log return $\sum_{h=0}^{9} r_{t+h}$, and it is compared with the square-root-of-time rule
+$\sqrt{10}\,\VaR_t^{1d}$ applied to the 1-day FHS VaR.
+
+The VaR made at $t-1$ is compared with the realised return $r_t + \dots + r_{t+9}$; the last 9 days of the sample
+are dropped. Because consecutive 10-day periods overlap, hits and losses are autocorrelated even under a correct model:
+the coverage tests are computed on non-overlapping periods and the Diebold--Mariano test uses a Newey--West variance
+with at least 10 lags. Losses are the tick and Lopez losses of Section~\ref{sec:backtesting} evaluated on 10-day returns.
+
+\inputtable{tab_var10}
+
+\begin{figure}[H]\centering
+\safegraphics[width=\linewidth]{F3.1_var10_EWP_0.01.png}
+\safegraphics[width=\linewidth]{F3.1_var10_SMI_0.01.png}
+\caption{Realised 10-day returns and 1\% 10-day VaR, EWP (top) and SMI (bottom).}\label{fig:var10}
+\end{figure}
+
+\todo{comment: the square-root rule assumes i.i.d.\ returns with constant volatility; with volatility clustering it
+underestimates the risk after calm periods and overestimates it after turbulent ones (mean reversion of volatility).
+Discuss the violation rates and the DM test.}

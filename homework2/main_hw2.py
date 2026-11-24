@@ -14,6 +14,7 @@ STEP       POINT  SCRIPT          WHAT IT DOES
   plots    1      var_plots.py    VaR dynamics of index/EWP/UBS, local vs global violations
   var10    3      var_10d.py      10-day VaR: FHS vs square-root rule, Diebold-Mariano
   es       4      es_hw2.py       ES with 5 approaches, McNeil-Frey, Du-Escanciano, FZ0 + MCS
+  report   -      report/make_tables.py  LaTeX tables and figures for the report (report/tables, report/figures)
 What each script prints is also saved in outputs/logs/<step>.log.
 """
 import os, sys, time, argparse, subprocess
@@ -21,7 +22,8 @@ import os, sys, time, argparse, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)                                               # every script uses paths relative to homework2/
 STEPS = [("iid", "var_iid.py"), ("evt", "var_evt.py"), ("garch", "var_garch.py"), ("factors", "var_factors.py"),
-         ("backtest", "backtest_var.py"), ("plots", "var_plots.py"), ("var10", "var_10d.py"), ("es", "es_hw2.py")]   # order matters
+         ("backtest", "backtest_var.py"), ("plots", "var_plots.py"), ("var10", "var_10d.py"), ("es", "es_hw2.py"),
+         ("report", os.path.join("report", "make_tables.py"))]   # order matters
 LOG_DIR = os.path.join("outputs", "logs")
 
 

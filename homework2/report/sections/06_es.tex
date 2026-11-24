@@ -1,0 +1,48 @@
+% !TEX root = ../main.tex
+% Responsible: D -- Reviewer: B   (see homework2/README.md, Division of work)
+\section{Expected Shortfall (Point 4)}\label{sec:es}
+
+\subsection{Approaches}
+For the EWP and the SMI we compare five estimates of $\ES_t^\alpha = E[r_t \mid r_t \le \VaR_t^\alpha]$:
+\begin{itemize}
+  \item \textbf{HS}: average of the window returns below the empirical $\alpha$-quantile;
+  \item \textbf{AG-Normal}: $\ES_t^\alpha = \mu_t - \sigma_t\,\varphi(z_\alpha)/\alpha$;
+  \item \textbf{AG-$t$}: $\ES_t^\alpha = \mu_t + \sigma_t\,\ES^\alpha_{t_\nu}$, with
+        $\ES^\alpha_{t_\nu} = -\frac{f_\nu(t_{\nu,\alpha})}{\alpha}\,\frac{\nu+t_{\nu,\alpha}^2}{\nu-1}\sqrt{\frac{\nu-2}{\nu}}$;
+  \item \textbf{AG-FHS}: $\mu_t + \sigma_t$ times the average of the standardised residuals below their $\alpha$-quantile;
+  \item \textbf{AG-GPD} \citep{mcneil2000}: for the losses $-z$ with GPD tail,
+        $\ES = \frac{x_p}{1-\xi} + \frac{\beta-\xi u}{1-\xi}$, then $\ES_t^\alpha = \mu_t - \sigma_t\,\ES$.
+\end{itemize}
+Each ES is paired with the VaR of the same model (models 1, 9, 10, 11 and 15).
+
+\subsection{Backtests}
+\begin{itemize}
+  \item \textbf{McNeil--Frey} \citep{mcneil2000}: on violation days the residuals $e_t = (r_t - \ES_t)/\sigma_t$ have
+        zero mean if the ES is correct; one-sided test (H$_1$: mean $<0$, losses beyond the VaR larger than predicted)
+        with bootstrap p-value.
+  \item \textbf{Du--Escanciano unconditional} \citep{du2017}: with the PIT $u_t = F_t(r_t)$, the cumulative violations
+        $H_t = \frac{\alpha-u_t}{\alpha}\1\{u_t\le\alpha\}$ have mean $\alpha/2$;
+        $U_{ES} = \sqrt n\,(\bar H - \alpha/2)/\sqrt{\alpha(1/3-\alpha/4)} \sim N(0,1)$.
+  \item \textbf{Du--Escanciano conditional} \citep{du2017}: Box--Pierce statistic with 5 lags on $H_t-\alpha/2$, $\chi^2_5$.
+\end{itemize}
+
+\subsection{Loss function}
+VaR and ES are compared with the FZ0 loss of \citet{patton2019}, a member of the class of loss functions that are
+jointly strictly consistent for (VaR, ES) characterised by \citet{fissler2016}:
+\begin{equation}\label{eq:fz0}
+  L^{FZ0}(r_t,\VaR_t,\ES_t) = -\frac{1}{\alpha\,\ES_t}\,\1\{r_t\le\VaR_t\}(\VaR_t - r_t) + \frac{\VaR_t}{\ES_t} + \log(-\ES_t) - 1 .
+\end{equation}
+ES alone is not elicitable, so no loss function can rank ES forecasts by themselves; the FZ0 loss ranks the pair
+(VaR, ES) correctly in expectation. The loss is taken from the literature, it is not designed by the group.
+We compare the models with the Diebold--Mariano test against HS and with the 90\% Model Confidence Set, on the full
+sample and on each calendar year.
+
+\subsection{Results}
+\inputtable{tab_es}
+\inputtable{tab_es_years}
+\begin{figure}[H]\centering
+\safegraphics[width=\linewidth,height=0.5\textheight,keepaspectratio]{F4.1_es_EWP_0.01.png}
+\caption{EWP: 1\% VaR and ES of the five approaches; red dots are VaR violations.}\label{fig:es_EWP}
+\end{figure}
+\todo{comment: which approach passes the tests, which is in the MCS; is the size of the losses beyond the VaR
+captured (compare Loss$|$hit with ES$|$hit); stability over the years; SMI figure in the Appendix.}
