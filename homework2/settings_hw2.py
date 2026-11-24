@@ -1,4 +1,5 @@
 """Homework 2 - global settings. Change things ONLY here, so every script gives identical numbers.
+Agreed by the whole group (week 1); data part maintained by member A, the rest by member D.
 
 This folder is independent of Homework 1: it only READS ../data/returns.csv (built by the HW1 pipeline) and
 writes everything in homework2/outputs/. No file of Homework 1 is modified.

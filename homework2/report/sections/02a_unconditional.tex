@@ -1,0 +1,21 @@
+% !TEX root = ../main.tex
+% Responsible: A -- Reviewer: D   (see homework2/README.md, Division of work)
+\subsection{Unconditional models (1--8, i.i.d.\ returns)}
+\begin{itemize}
+  \item \textbf{Historical Simulation (1)}: $\VaR_t^\alpha$ is the empirical $\alpha$-quantile of the last $W$ returns.
+  \item \textbf{Parametric (2--4)}: Normal, Student-$t$ and Generalized Hyperbolic \citep{barndorff1977} distributions
+        fitted by maximum likelihood on the window; the VaR is the $\alpha$-quantile of the fitted distribution.
+  \item \textbf{Cornish--Fisher (5)} \citep{cornish1938}: $\VaR_t^\alpha = \hat\mu + \hat\sigma\, z_{CF}$, with
+  \begin{equation}\label{eq:cf}
+    z_{CF} = z_\alpha + \frac{(z_\alpha^2-1)S}{6} + \frac{(z_\alpha^3-3z_\alpha)K}{24} - \frac{(2z_\alpha^3-5z_\alpha)S^2}{36},
+  \end{equation}
+  where $S$ and $K$ are the sample skewness and excess kurtosis of the window.
+  \item \textbf{GEV (6--7)} \citep{embrechts1997}: a GEV distribution $G_{\xi,\mu,\sigma}$ is fitted to the monthly
+        (21-day) maxima of the losses $L_t=-r_t$. If daily losses have distribution $F$ and extremal index $\theta$,
+        then $F^{m\theta} \approx G$, so the loss quantile is $x_p = G^{-1}(p^{m\theta})$ with $p = 1-\alpha$ and
+        $m=21$; model 6 sets $\theta = 1$, model 7 uses the blocks estimator
+        $\hat\theta = \log(1-G_u)/(m\log(1-N_u))$ with threshold $u$ at the 95\% loss quantile.
+  \item \textbf{GPD (8)}: a Generalized Pareto distribution $(\xi,\beta)$ is fitted to the excesses over $u$, the 90\%
+        quantile of the losses, and
+        $x_p = u + \frac{\beta}{\xi}\big[(\alpha\, T/N_u)^{-\xi}-1\big]$, with $N_u$ exceedances out of $T$ losses.
+\end{itemize}

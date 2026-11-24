@@ -1,4 +1,5 @@
 """Homework 2 - AR(1)-GJR-GARCH(1,1) written with numpy/scipy only (no `arch` package), so every formula is visible.
+Responsible: member B (reviewer: C).
 
     r_t      = c + phi * r_{t-1} + eps_t ,           eps_t = sigma_t * z_t
     sigma2_t = omega + (alpha + gamma * 1{eps_{t-1} < 0}) * eps_{t-1}^2 + beta * sigma2_{t-1}

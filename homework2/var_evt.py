@@ -1,4 +1,5 @@
 """Homework 2, Point 1 - EVT VaR on the raw returns, i.i.d. assumption, EXPANDING window (all data before day t):
+Responsible: member A (reviewer: D).
     M06 GEV on monthly block maxima of the losses, without extremal index (theta = 1)
     M07 GEV with the extremal index theta (blocks estimator)
     M08 GPD on the excesses over a threshold u = GPD_U_Q quantile of the losses.

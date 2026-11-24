@@ -1,5 +1,5 @@
 % !TEX root = ../main.tex
-% Responsible: A -- Reviewer: B   (see homework2/README.md, Division of work)
+% Responsible: A -- Reviewer: D   (see homework2/README.md, Division of work)
 \section{Data and setup}\label{sec:data}
 
 \paragraph{Series.} The analysis covers the 16 Swiss large caps of Homework~1 (Roche, Novartis, Nestl\'e, UBS, ABB,
@@ -8,7 +8,7 @@ equally weighted portfolio (EWP) and the Swiss Market Index (SMI, LSEG RIC \text
 returns in percent, $r_t = 100\,\log(P_t/P_{t-1})$, in Swiss francs, from 27/09/2011 to 30/09/2026. The EWP return is the
 simple average of the 16 log returns, as in Homework~1. For the factor models we use the daily Fama--French Europe
 five factors \citep{fama2015} (market, size, value, profitability, investment) from the Kenneth French data library.
-\todo{descriptive statistics of the SMI and comparison with the EWP; check of the factor data (dates, currency).}
+\todo{A: descriptive statistics of the SMI and comparison with the EWP. C: check of the factor data (dates, currency).}
 
 \paragraph{Backtesting design.} The backtesting sample is 1/10/2021--30/09/2026 (1{,}256 trading days). For every day $t$
 of this sample the VaR is forecast with information up to $t-1$ only:

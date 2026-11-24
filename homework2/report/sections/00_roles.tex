@@ -4,20 +4,21 @@
 % Replace A, B, C, D with the names (same letters as in homework2/README.md).
 \begin{table}[H]
 \centering\small
-\caption{Contribution of the group members (responsible = runs and checks the code of the point, writes the section
-and answers the professor's questions on it; reviewer = checks results and text of the section).}
-\begin{tabular}{p{4.3cm}p{1.9cm}p{1.6cm}p{6.4cm}}
+\caption{Contribution of the group members. Responsible: builds and checks the code of the point, writes the section
+and answers questions on it. Reviewer: checks the results and the text of the section.}
+\begin{tabular}{p{4.4cm}p{1.9cm}p{1.6cm}p{6.3cm}}
 \toprule
 Point & Responsible & Reviewer & Content \\
 \midrule
-Data & A & B & SMI (LSEG) and Fama--French factors; descriptive statistics of the SMI \\
-1. Unconditional VaR models (1--8, 20) & A & C & HS, parametric, Cornish--Fisher, EVT, EWMA \\
-1. Conditional and factor models (9--19, 21) & B & C & AR(1)-GJR-GARCH family, CCC/DCC, FHS, model 21 \\
-1. Evolution of the VaR (comment) & A & D & VaR dynamics, local vs global shocks \\
-2. Backtesting & C & A & Coverage and independence tests, DM, MCS, analysis by year \\
-3. 10-day VaR & B & C & FHS over 10 days vs square-root rule \\
-4. Expected Shortfall & D & B & ES approaches, ES backtests, FZ0 loss, MCS \\
-Conclusions, AI section, final report & D & all & Final run of the code, compilation and consistency of the report \\
+Data module & A & D & Prices, returns, EWP, SMI, backtest window, seed, output format \\
+1. Unconditional VaR (models 1--8) & A & D & HS, Normal, Student-$t$, GH, Cornish--Fisher, GEV with and without extremal index, GPD \\
+1. Conditional VaR (models 9--15, 20) & B & C & AR(1)-GJR-GARCH with 7 innovation quantiles, EWMA \\
+1. Factor models (16--19, 21) & C & B & Fama--French mapping, CCC/DCC Gaussian and FHS, skewed-$t$ GARCH on $X$ \\
+1. Evolution of the VaR (comment) & B & C & Spikes, reaction to volatility, local vs global shocks \\
+2. Backtesting & D & A & UC, IND, CC, Berkowitz, DQ, Diebold--Mariano, MCS; full sample and by year \\
+3. 10-day VaR & B & C & FHS over 10 days vs square-root rule, Diebold--Mariano \\
+4. Expected Shortfall & A & D & Five ES approaches, three ES backtests, FZ0 loss, MCS \\
+Integration and report & D & all & Reproducible code, final report, use of AI \\
 \bottomrule
 \end{tabular}
 \end{table}

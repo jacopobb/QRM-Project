@@ -1,4 +1,6 @@
-"""Homework 2 - shared helpers: data loading (16 stocks + EWP + market index), backtest dates, saving/loading VaR."""
+"""Homework 2 - shared helpers: data loading (16 stocks + EWP + market index), backtest dates, saving/loading VaR.
+Shared data module. Responsible: member A (reviewer: D).
+"""
 import os, glob, warnings                                    # file handling and warnings
 import numpy as np                                           # numerical arrays
 import pandas as pd                                          # time series / tables

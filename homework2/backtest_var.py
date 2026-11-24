@@ -1,4 +1,5 @@
 """Homework 2, Point 2 - backtesting of the VaR forecasts of all models, at 1% and 5%.
+Responsible: member D (reviewer: A).
 For every series and level:
   - hits, violation rate, Kupiec UC, Christoffersen IND and CC, Berkowitz (BCP 2011) Ljung-Box on the hits,
     Engle-Manganelli Dynamic Quantile test

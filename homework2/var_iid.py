@@ -1,6 +1,6 @@
 """Homework 2, Point 1 - unconditional VaR on a rolling window of 5 years (W_ROLL days):
-    M01 Historical Simulation, M02 Normal, M03 Student-t, M04 Generalized Hyperbolic, M05 Cornish-Fisher,
-    M20 EWMA mean and variance with Gaussian quantile.
+    M01 Historical Simulation, M02 Normal, M03 Student-t, M04 Generalized Hyperbolic, M05 Cornish-Fisher.
+Responsible: member A (reviewer: D).
 For every day t of the backtesting sample, the VaR uses only the W_ROLL returns before t (no look-ahead).
 VaR is reported as a return quantile (negative number, in %): a violation is ret_t < VaR_t.
 Output: outputs/var/iid/<series>.csv (VaR) and outputs/params/iid/<series>.csv (estimated parameters over time).
@@ -13,7 +13,7 @@ import numpy as np                                           # arrays
 import pandas as pd                                          # tables
 from numpy.lib.stride_tricks import sliding_window_view      # all rolling windows at once, without copying data
 from scipy import stats, optimize                            # distributions and optimiser
-from settings_hw2 import *                                   # W_ROLL, ALPHAS, REFIT, EWMA_LAMBDA, ...
+from settings_hw2 import *                                   # W_ROLL, ALPHAS, REFIT, ...
 from common import load_returns, backtest_dates, save_var, ensure_dirs, run_parallel
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)   # silence overflow warnings of trial parameters in the MLE
@@ -58,20 +58,6 @@ def fit_gh(x, start=None):
     return stats.genhyperbolic.fit(x)                        # first day or failed warm start
 
 
-def ewma_mean_var(x, lam=EWMA_LAMBDA, n_init=60):
-    """EWMA forecasts for day t+1 made with data up to t:
-        m_{t+1} = lam*m_t + (1-lam)*x_t ,   s2_{t+1} = lam*s2_t + (1-lam)*(x_t - m_t)^2.
-    Started with the mean/variance of the first n_init days. The weight of the starting value after 5 years is
-    lam^1260 ~ 1e-34, so running the recursion on the whole sample is numerically identical to restarting it
-    on each 5-year rolling window (and far faster)."""
-    m = np.empty(len(x) + 1); s2 = np.empty(len(x) + 1)
-    m[0], s2[0] = x[:n_init].mean(), x[:n_init].var(ddof=1)  # starting values
-    for t in range(len(x)):
-        s2[t + 1] = lam * s2[t] + (1 - lam) * (x[t] - m[t]) ** 2   # EWMA variance around the EWMA mean
-        m[t + 1] = lam * m[t] + (1 - lam) * x[t]                   # EWMA mean
-    return m[1:], s2[1:]           # element t = forecast for day t+1
-
-
 # ------------------------------------------------------------------ one series
 def run_series(name):
     t0 = time.time()
@@ -108,16 +94,10 @@ def run_series(name):
         out[f"M03_T_{a}"] = stats.t.ppf(a, par_t[:, 0], loc=par_t[:, 1], scale=par_t[:, 2])   # t quantile
         out[f"M04_GH_{a}"] = q_gh[:, j]                                                        # GH quantile
 
-    # M20 EWMA (mean and variance), Gaussian quantile
-    m, s2 = ewma_mean_var(x)
-    m_bt, s_bt = m[pos - 1], np.sqrt(s2[pos - 1])            # forecasts made at t-1 for day t
-    for a in ALPHAS:
-        out[f"M20_EWMA_{a}"] = m_bt + s_bt * stats.norm.ppf(a)
-
     save_var(SCRIPT, name, out)                              # -> outputs/var/iid/<series>.csv
-    params = pd.DataFrame(np.c_[mu, sd, S, K, par_t, par_gh, m_bt, s_bt], index=dates,
+    params = pd.DataFrame(np.c_[mu, sd, S, K, par_t, par_gh], index=dates,
                           columns=["mean", "std", "skew", "exkurt", "t_df", "t_loc", "t_scale",
-                                   "gh_p", "gh_a", "gh_b", "gh_loc", "gh_scale", "ewma_mean", "ewma_sd"])
+                                   "gh_p", "gh_a", "gh_b", "gh_loc", "gh_scale"])
     os.makedirs(os.path.join(OUT_DIR, "params", SCRIPT), exist_ok=True)
     params.to_csv(os.path.join(OUT_DIR, "params", SCRIPT, f"{name}.csv"))   # parameters day by day (for the comments)
     print(f"  {name:16s} done in {time.time() - t0:6.1f}s", flush=True)
@@ -127,5 +107,5 @@ def run_series(name):
 if __name__ == "__main__":
     ensure_dirs()
     series = sys.argv[1:] or list(load_returns().columns)    # series from the command line, or all of them
-    print(f"var_iid: models M01-M05, M20 on {len(series)} series, window {W_ROLL}, refit every {REFIT} day(s), {N_JOBS} processes")
+    print(f"var_iid: models M01-M05 on {len(series)} series, window {W_ROLL}, refit every {REFIT} day(s), {N_JOBS} processes")
     run_parallel(run_series, series)

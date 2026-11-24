@@ -12,10 +12,10 @@ python main_hw2.py --from backtest   # re-run only the evaluation once the VaR f
 ```
 
 ## 1. Data to add before running (folder `homework2/data/`)
-| File | Content | Source |
-|---|---|---|
-| `index_prices.csv` | two columns `Date,Close`: daily closes of the **SMI** (RIC `.SSMI`), 26/09/2011–30/09/2026 | LSEG Workspace |
-| `Europe_5_Factors_Daily.csv` | Fama-French **Europe 5 Factors [Daily]**, csv as downloaded (unzipped), not edited | [Kenneth French data library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) → *Developed Market Factors and Returns* |
+| File | Content | Source | Who |
+|---|---|---|---|
+| `index_prices.csv` | two columns `Date,Close`: daily closes of the **SMI** (RIC `.SSMI`), 26/09/2011–30/09/2026 | LSEG Workspace | A |
+| `Europe_5_Factors_Daily.csv` | Fama-French **Europe 5 Factors [Daily]**, csv as downloaded (unzipped), not edited | [Kenneth French data library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) → *Developed Market Factors and Returns* | C |
 
 Without the index file the index is skipped (warning); without the factor file the step `factors` stops with a message.
 
@@ -24,21 +24,27 @@ Backtest 1/10/2021–30/09/2026; rolling window 1260 days (5y); alpha 1% and 5%;
 GPD threshold 90% loss quantile; extremal index threshold 95%; EWMA lambda 0.94; parametric models re-estimated every
 day (`REFIT = 1`); seed 42 for every simulation/bootstrap. Do not change them between steps.
 
-## 3. Scripts → homework points
-| Script | Point | Content | Main outputs |
-|---|---|---|---|
-| `var_iid.py` | 1 | M01 HS, M02 Normal, M03 t, M04 GH, M05 Cornish-Fisher, M20 EWMA (rolling 5y) | `outputs/var/iid/` |
-| `var_evt.py` | 1 | M06 GEV, M07 GEV + extremal index, M08 GPD (expanding) | `outputs/var/evt/` |
-| `var_garch.py` | 1 | M09–M15: AR(1)-GJR-GARCH(1,1) + N / t / HS(FHS) / CF / GEV / GEV-θ / GPD quantile of z | `outputs/var/garch/`, ES inputs |
-| `var_factors.py` | 1 | M16/M17 CCC/DCC Gaussian, M18/M19 CCC/DCC FHS, M21 X = b'f with skewed-t (stocks + EWP only) | `outputs/var/factors*/` |
-| `var_plots.py` | 1 (comment) | VaR dynamics for SMI, EWP, UBS; spikes, staleness, lag w.r.t. volatility; local vs global violations | F1.1, V1–V3 |
-| `backtest_var.py` | 2 | Kupiec UC, Christoffersen IND/CC, Berkowitz (BCP Ljung-Box on hits), DQ, DM vs HS (tick, Lopez), MCS (tick), by year | T2.1–T2.6 |
-| `var_10d.py` | 3 | 10-day VaR: FHS vs √10 rule, violations, DM with HAC (≥10 lags) and on non-overlapping periods | T3.1, F3.1 |
-| `es_hw2.py` | 4 | ES with HS, GARCH-N, GARCH-t, FHS, GARCH-GPD; McNeil-Frey, Du-Escanciano U_ES and C_ES; FZ0 loss, DM, MCS; by year | T4.1, T4.2, F4.1 |
-| `garch_core.py`, `tests_lib.py`, `common.py` | – | GARCH/skew-t engine; tests and losses; data loading | – |
+## 3. Scripts → homework points → owner
+| Script | Point | Content | Main outputs | Owner |
+|---|---|---|---|---|
+| `common.py`, `settings_hw2.py` | – | shared data module: returns, EWP, SMI, backtest window, seed, output format | – | A (settings agreed by all) |
+| `var_iid.py` | 1 | M01 HS, M02 Normal, M03 t, M04 GH, M05 Cornish-Fisher (rolling 5y) | `outputs/var/iid/` | A |
+| `var_evt.py` | 1 | M06 GEV, M07 GEV + extremal index, M08 GPD (expanding) | `outputs/var/evt/` | A |
+| `garch_core.py` | – | AR(1)-GJR-GARCH(1,1) engine (normal, t, skewed-t), FHS simulation | – | B |
+| `var_garch.py` | 1 | M09–M15: AR(1)-GJR-GARCH(1,1) + N / t / HS(FHS) / CF / GEV / GEV-θ / GPD quantile of z; M20 EWMA | `outputs/var/garch/`, ES inputs | B |
+| `var_plots.py` | 1 (comment) | VaR dynamics for SMI, EWP, UBS; spikes, staleness, lag w.r.t. volatility; local vs global violations | F1.1, V1–V3 | B |
+| `var_10d.py` | 3 | 10-day VaR: FHS vs √10 rule, violations, DM with HAC (≥10 lags) and on non-overlapping periods | T3.1, F3.1 | B |
+| `var_factors.py` | 1 | M16/M17 CCC/DCC Gaussian, M18/M19 CCC/DCC FHS, M21 X = b'f with skewed-t (stocks + EWP only); bonus 22+ | `outputs/var/factors*/` | C |
+| `tests_lib.py` | 2 | VaR tests (UC, IND, CC, Berkowitz, DQ), tick and Lopez losses, Diebold-Mariano, MCS | – | D |
+| `backtest_var.py` | 2 | all tests on all models and series, full sample and by year; summaries | T2.1–T2.6 | D |
+| `es_hw2.py` | 4 | ES with HS, GARCH-N, GARCH-t, FHS, GARCH-GPD; McNeil-Frey, Du-Escanciano U_ES and C_ES; FZ0 loss, DM, MCS; by year | T4.1, T4.2, F4.1 | A |
+| `main_hw2.py`, `report/make_tables.py` | – | runs everything; LaTeX tables and figures | `report/tables`, `report/figures` | D |
 
-VaR is always a **return quantile** (negative, %): violation on day *t* ⇔ `ret_t < VaR_t`.
-`common.load_var(series)` merges all the VaR forecasts of a series with the realised return.
+**Shared output format (week-1 agreement, already implemented):** every VaR script writes
+`outputs/var/<script>/<series>.csv` with dates as rows and one column per model and level, named `<code>_<alpha>`
+(e.g. `M04_GH_0.01`). VaR is always a **return quantile** (negative, %): violation on day *t* ⇔ `ret_t < VaR_t`.
+`common.load_var(series)` merges all the VaR forecasts of a series with the realised return: the backtesting code
+only needs this function, so D can test it with any subset of models (e.g. HS only) before the others are ready.
 
 ## 4. Choices to justify in the report (the professor may ask)
 - **ARMA-GARCH = AR(1)-GJR-GARCH(1,1)** for every series: one specification for all, so differences between M09–M15
@@ -64,36 +70,54 @@ VaR is always a **return quantile** (negative, %): violation on day *t* ⇔ `ret
 - The EWMA (M20) is also computed for the index (the assignment requires 15 models for the index, we report 16).
 
 ## 5. Division of work (replace A, B, C, D with the names, also in `report/sections/00_roles.tex`)
-The assignment asks who took care of each point and with which role. **Responsible** = understands and runs the code
-of the point, checks its results, writes the section and answers the professor's questions on it (the professor may
-ask any member to justify the choices of README §4). **Reviewer** = re-reads results and text of the section.
+Point 1 is the bottleneck: it produces the 21 VaR series every other point uses. Each member owns one family of
+models; D builds the backtesting code in parallel, on whatever VaR series already exist.
+**Responsible** = builds/runs the code of the point, checks its results, writes the section and answers the
+professor's questions on it (anyone may be asked about the choices of §4). **Reviewer** = re-reads results and text.
 
-| Member | Points | Code to own (must be able to explain it) | Report files | Other tasks | Reviews |
+| Member | Points / models | Code to own (must be able to explain it) | Report files | Other tasks | Reviews |
 |---|---|---|---|---|---|
-| **A** | Data; Point 1: models 1–8, 20; Point 1 comment (VaR dynamics, local/global shocks) | `var_iid.py`, `var_evt.py`, `var_plots.py`, `common.py` | `01_data.tex`, `02_var_models.tex` §2.1 + EWMA, `03_var_dynamics.tex` | download SMI (LSEG) and Fama-French factors; check the event dates of the figures | `04_backtesting.tex` (C) |
-| **B** | Point 1: models 9–19, 21; Point 3 (10-day VaR) | `garch_core.py`, `var_garch.py`, `var_factors.py`, `var_10d.py` | `02_var_models.tex` §2.2–2.3, `05_var10.tex` | ask the professor about CHF returns vs USD factors | `01_data.tex` (A), `06_es.tex` (D) |
-| **C** | Point 2 (backtesting) | `tests_lib.py` (VaR tests, DM, MCS), `backtest_var.py` | `04_backtesting.tex` | check the Berkowitz test against the course slides | `02_var_models.tex` (A, B), `05_var10.tex` (B) |
-| **D** | Point 4 (ES); final report | `es_hw2.py`, `tests_lib.py` (ES loss), `main_hw2.py`, `report/make_tables.py` | `06_es.tex`, `07_conclusions.tex`, `08_ai.tex`, `00_roles.tex`, `main.tex`, `references.bib` | final run of the pipeline with the real data, commit of `report/tables` and `report/figures`, final PDF | `03_var_dynamics.tex` (A) |
+| **A** | Data; Point 1 models 1–8; Point 4 (ES) | `common.py`, `var_iid.py`, `var_evt.py`, `es_hw2.py` | `01_data.tex`, `02a_unconditional.tex`, `06_es.tex` | download the SMI (LSEG); owns the shared data module | D (`04_backtesting.tex`) |
+| **B** | Point 1 models 9–15, 20; Point 1 comment (VaR evolution); Point 3 | `garch_core.py`, `var_garch.py`, `var_plots.py`, `var_10d.py` | `02b_conditional.tex`, `03_var_dynamics.tex`, `05_var10.tex` | check the event dates of the figures | C (`02c_factor.tex`) |
+| **C** | Point 1 models 16–19, 21, bonus 22+ | `var_factors.py` | `02c_factor.tex` | download the Fama-French factors; ask the professor about CHF returns vs USD factors | B (`02b`, `03`, `05`) |
+| **D** | Point 2; integration; AI section | `tests_lib.py`, `backtest_var.py`, `main_hw2.py`, `report/make_tables.py` | `04_backtesting.tex`, `02_var_models.tex` (intro), `00_roles.tex`, `07_conclusions.tex`, `08_ai.tex`, `09_appendix.tex`, `main.tex` | check the Berkowitz test against the course slides; final run of the code; commit of `report/tables` and `report/figures`; final PDF | A (`01`, `02a`, `06`) |
 
-Everybody: collect the prompts used with AI tools and send them to D for `08_ai.tex`.
+Review pairs: **A ↔ D** and **B ↔ C**.
 
 ### Report files → who writes them
 | File | Section | Responsible | Reviewer |
 |---|---|---|---|
 | `sections/00_roles.tex` | Contribution of the members | D | all |
-| `sections/01_data.tex` | 1. Data and setup | A | B |
-| `sections/02_var_models.tex` | 2. VaR models (Point 1): §2.1 + EWMA / §2.2–2.3 | A / B | C |
-| `sections/03_var_dynamics.tex` | 3. Evolution of the VaR (Point 1, comment) | A | D |
-| `sections/04_backtesting.tex` | 4. Backtesting (Point 2) | C | A |
+| `sections/01_data.tex` | 1. Data and setup | A | D |
+| `sections/02_var_models.tex` | 2. VaR models: introduction and table of models | D | all |
+| `sections/02a_unconditional.tex` | 2.1 Unconditional models (1–8) | A | D |
+| `sections/02b_conditional.tex` | 2.2 Conditional models (9–15, 20) | B | C |
+| `sections/02c_factor.tex` | 2.3 Factor models (16–19, 21, bonus) | C | B |
+| `sections/03_var_dynamics.tex` | 3. Evolution of the VaR (Point 1, comment) | B | C |
+| `sections/04_backtesting.tex` | 4. Backtesting (Point 2) | D | A |
 | `sections/05_var10.tex` | 5. 10-day VaR (Point 3) | B | C |
-| `sections/06_es.tex` | 6. Expected Shortfall (Point 4) | D | B |
+| `sections/06_es.tex` | 6. Expected Shortfall (Point 4) | A | D |
 | `sections/07_conclusions.tex` | 7. Conclusions | D (with input from all) | all |
-| `sections/08_ai.tex` | 8. Use of AI tools | D | all |
+| `sections/08_ai.tex` | 8. Use of AI tools | D (prompts collected by all) | all |
 | `sections/09_appendix.tex` | Appendix | D | – |
+
+### Timeline (deadline: 10 January, end of day)
+| By | What |
+|---|---|
+| ~1 December | data module and output format agreed (already implemented: §2, §3); SMI and factors downloaded |
+| ~20 December | all VaR series delivered (models 1–21): each owner runs and checks their scripts |
+| ~3 January | backtesting (Point 2), 10-day VaR (Point 3) and ES (Point 4) done |
+| 3–10 January | writing, cross-review, final check that the code reproduces every number and figure (D) |
+
+### Rules for everyone
+- Each member writes their own sections and reviews at least one other (pairs above).
+- Each member keeps a log of AI tools, purposes and prompts as they go, and sends it to D for `08_ai.tex`.
+- Code must stay commented, marking which table, figure or model estimation each step produces.
+- Every result must be commented from both the statistical/econometric and the financial point of view.
 
 ## 6. LaTeX report (`report/`)
 - `main.tex` joins all the section files with `\input`: nobody merges files by hand, compiling `main.tex` gives the whole PDF.
-- Each member edits **only their own section files**; `main.tex`, `00_roles.tex`, `08_ai.tex` are edited by D only.
+- Each member edits **only their own section files** (table above); `main.tex`, `00_roles.tex`, `08_ai.tex` are edited by D only.
 - `make_tables.py` (last step of `main_hw2.py`) writes `report/tables/` and copies the figures to `report/figures/`:
   never edit them by hand. Until the pipeline has been run, red boxes replace the missing tables and figures.
 - Red `\todo{...}` placeholders mark the text still to write: remove them all before submitting.

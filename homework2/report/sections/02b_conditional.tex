@@ -1,0 +1,18 @@
+% !TEX root = ../main.tex
+% Responsible: B -- Reviewer: C   (see homework2/README.md, Division of work)
+\subsection{Conditional models (9--15, 20)}
+All the ARMA-GARCH models share the same AR(1)-GJR-GARCH(1,1) specification \citep{glosten1993}:
+\begin{equation}\label{eq:garch}
+  r_t = c + \phi r_{t-1} + \varepsilon_t,\qquad \varepsilon_t=\sigma_t z_t,\qquad
+  \sigma_t^2 = \omega + (\alpha_1 + \gamma\,\1\{\varepsilon_{t-1}<0\})\,\varepsilon_{t-1}^2 + \beta\sigma_{t-1}^2 ,
+\end{equation}
+with $z_t$ i.i.d.\ with zero mean and unit variance. The VaR is $\VaR_t^\alpha = \mu_t + \sigma_t\, q_\alpha(z)$,
+and the seven models differ only in the quantile $q_\alpha(z)$ of the innovations: Normal (9), unit-variance
+Student-$t$ with estimated degrees of freedom (10), empirical quantile of the standardised residuals, i.e.\
+Filtered Historical Simulation \citep{barone1999} (11), Cornish--Fisher on the moments of $z$ (12), GEV without and
+with extremal index (13--14) and GPD (15) fitted to the losses $-z$ \citep{mcneil2000}. Model 10 is estimated by
+Student-$t$ maximum likelihood, the others by Gaussian quasi-maximum likelihood.
+\todo{justify the GJR specification with the asymmetry found in Homework 1.}
+
+\textbf{EWMA (20)}: $\mu_{t+1} = \lambda\mu_t + (1-\lambda)r_t$, $\sigma^2_{t+1} = \lambda\sigma^2_t + (1-\lambda)(r_t-\mu_t)^2$
+with $\lambda = 0.94$ \citep{riskmetrics1996}, and Gaussian quantile.

@@ -1,4 +1,5 @@
 """Homework 2 - runs every step in order and stops at the first error. Run from inside homework2/:
+Responsible: member D (integration: the code must reproduce every number and figure of the report).
 
     python main_hw2.py                  # everything
     python main_hw2.py --from backtest  # restart from one step (outputs of the earlier steps must exist)
@@ -6,15 +7,15 @@
     python main_hw2.py --list
 
 STEP       POINT  SCRIPT          WHAT IT DOES
-  iid      1      var_iid.py      M01-M05, M20 (HS, Normal, t, GH, Cornish-Fisher, EWMA)
-  evt      1      var_evt.py      M06-M08 (GEV, GEV with extremal index, GPD; expanding)
-  garch    1      var_garch.py    M09-M15 (AR(1)-GJR-GARCH + 7 innovation quantiles)
-  factors  1      var_factors.py  M16-M19 (factors + CCC/DCC, Gaussian/FHS), M21 (X skew-t)
-  backtest 2      backtest_var.py UC/IND/CC, BCP, DQ, Diebold-Mariano vs HS, MCS, by year
-  plots    1      var_plots.py    VaR dynamics of index/EWP/UBS, local vs global violations
-  var10    3      var_10d.py      10-day VaR: FHS vs square-root rule, Diebold-Mariano
-  es       4      es_hw2.py       ES with 5 approaches, McNeil-Frey, Du-Escanciano, FZ0 + MCS
-  report   -      report/make_tables.py  LaTeX tables and figures for the report (report/tables, report/figures)
+  iid      1      var_iid.py      M01-M05 (HS, Normal, t, GH, Cornish-Fisher)                     [A]
+  evt      1      var_evt.py      M06-M08 (GEV, GEV with extremal index, GPD; expanding)           [A]
+  garch    1      var_garch.py    M09-M15 (AR(1)-GJR-GARCH + 7 innovation quantiles), M20 EWMA     [B]
+  factors  1      var_factors.py  M16-M19 (factors + CCC/DCC, Gaussian/FHS), M21 (X skew-t)       [C]
+  backtest 2      backtest_var.py UC/IND/CC, BCP, DQ, Diebold-Mariano vs HS, MCS, by year          [D]
+  plots    1      var_plots.py    VaR dynamics of index/EWP/UBS, local vs global violations        [B]
+  var10    3      var_10d.py      10-day VaR: FHS vs square-root rule, Diebold-Mariano             [B]
+  es       4      es_hw2.py       ES with 5 approaches, McNeil-Frey, Du-Escanciano, FZ0 + MCS      [A]
+  report   -      report/make_tables.py  LaTeX tables and figures for the report                   [D]
 What each script prints is also saved in outputs/logs/<step>.log.
 """
 import os, sys, time, argparse, subprocess

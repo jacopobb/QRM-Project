@@ -1,4 +1,5 @@
 """Homework 2 - turns the csv results in outputs/tables into LaTeX tables (booktabs) in report/tables/.
+Responsible: member D.
 Run after the pipeline (main_hw2.py does it as its last step), so the numbers in the report are always the numbers
 produced by the code. The .tex files are overwritten at every run: do not edit them by hand, edit this script.
 

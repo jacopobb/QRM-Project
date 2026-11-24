@@ -1,4 +1,5 @@
 """Homework 2 - statistical tests and loss functions shared by the backtesting scripts (Points 2, 3, 4).
+Responsible: member D (reviewer: A); the ES-specific code (FZ0 loss, ES tests) is in es_hw2.py (member A).
 All functions take numpy arrays; VaR/ES are return quantiles (negative numbers), hit I_t = 1{r_t < VaR_t}."""
 import numpy as np
 from scipy import stats
@@ -69,13 +70,6 @@ def tick_loss(r, var, a):
 def lopez_loss(r, var, a=None):
     """Lopez (1999) magnitude loss: 1 + (r - VaR)^2 on violation days, 0 otherwise."""
     return np.where(r < var, 1 + (r - var) ** 2, 0.0)
-
-
-def fz0_loss(r, var, es, a):
-    """FZ0 loss of Patton, Ziegel and Chen (2019, J. of Econometrics 211), from the Fissler-Ziegel (2016) class:
-    L = -1/(a ES) 1{r <= VaR}(VaR - r) + VaR/ES + log(-ES) - 1, with VaR, ES < 0.
-    Jointly strictly consistent for (VaR, ES): the only kind of loss that can rank ES forecasts."""
-    return -1 / (a * es) * (r <= var) * (var - r) + var / es + np.log(-es) - 1
 
 
 # ------------------------------------------------------------------ Diebold-Mariano

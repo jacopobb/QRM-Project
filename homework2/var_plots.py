@@ -1,4 +1,5 @@
 """Homework 2, Point 1 (comment) - evolution of the VaR over the backtesting sample for the market index, the EWP and
+Responsible: member B (reviewer: C).
 one stock (PLOT_ASSET), and analysis of the violations (local vs global shocks).
 Outputs:
   figures/F1.1_var_<series>_<alpha>.png   returns, VaR of three groups of models, violations, main market events

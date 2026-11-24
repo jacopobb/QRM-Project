@@ -1,4 +1,5 @@
 """Homework 2, Point 4 - Expected Shortfall for the EWP and the market index: five approaches, three backtests,
+Responsible: member A (reviewer: D).
 a loss function for (VaR, ES) and the Model Confidence Set; full sample and each calendar year.
 Approaches (ES and the VaR it is paired with):
   HS      Historical Simulation, rolling 5y: ES = mean of the window returns below the HS VaR          (VaR M01)
@@ -12,7 +13,7 @@ Tests (all based on the violation days or on the PIT u_t = F_t(r_t) of the model
   2. Du and Escanciano (2017) unconditional test U_ES: cumulative violations H_t = (a - u_t)/a * 1{u_t <= a} have mean a/2.
   3. Du and Escanciano (2017) conditional test C_ES(5): Box-Pierce on H_t (no autocorrelation of the cumulative violations).
 Loss: FZ0 of Patton, Ziegel and Chen (2019), member of the Fissler-Ziegel (2016) class of losses jointly
-strictly consistent for (VaR, ES): see tests_lib.fz0_loss. Diebold-Mariano of each model vs HS and MCS (90%) on FZ0.
+strictly consistent for (VaR, ES): see fz0_loss below. Diebold-Mariano of each model vs HS and MCS (90%) on FZ0.
 Outputs: tables/es/T4.1_es_tests.csv, T4.2_es_mcs.csv, figures/F4.1_es_<series>_<alpha>.png
 """
 import os, sys, warnings
@@ -31,6 +32,13 @@ warnings.filterwarnings("ignore")
 TAB = os.path.join(TABLE_DIR, "es")
 ES_MODELS = {"HS": "M01_HS", "AG_N": "M09_AG_N", "AG_T": "M10_AG_T", "AG_HS": "M11_AG_HS", "AG_GPD": "M15_AG_GPD"}   # ES approach -> paired VaR model
 B_MF = 10000                                                 # bootstrap replications of the McNeil-Frey test
+
+
+def fz0_loss(r, var, es, a):
+    """FZ0 loss of Patton, Ziegel and Chen (2019, J. of Econometrics 211), from the Fissler-Ziegel (2016) class:
+    L = -1/(a ES) 1{r <= VaR}(VaR - r) + VaR/ES + log(-ES) - 1, with VaR, ES < 0.
+    Jointly strictly consistent for (VaR, ES): the only kind of loss that can rank ES forecasts."""
+    return -1 / (a * es) * (r <= var) * (var - r) + var / es + np.log(-es) - 1
 
 
 def es_inputs(name, r):
@@ -93,7 +101,7 @@ def evaluate(name, D, rng):
                 var, es, u, sig = (g[f"VaR_{m}_{a}"].values, g[f"ES_{m}_{a}"].values, g[f"PIT_{m}"].values, g[f"SIG_{m}"].values)
                 n_h, e_mean, t_mf, p_mf = mcneil_frey(r, var, es, sig, rng)   # test 1
                 U, pU, C, pC = du_escanciano(u, a)                           # tests 2 and 3
-                FZ[m] = tl.fz0_loss(r, var, es, a)                           # loss
+                FZ[m] = fz0_loss(r, var, es, a)                           # loss
                 hit = r < var
                 rows.append({"series": name, "period": period, "alpha": a, "model": m, "n": len(r), "hits": int(hit.sum()),
                              "avg_ES": es.mean(), "avg_loss_beyond_VaR": r[hit].mean() if hit.any() else np.nan,

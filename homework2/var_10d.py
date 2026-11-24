@@ -1,4 +1,5 @@
 """Homework 2, Point 3 - 10-day VaR for the EWP and the market index.
+Responsible: member B (reviewer: C).
 Model: AR(1)-GJR-GARCH(1,1), Gaussian QML, rolling window of W_ROLL days (same as M09/M11).
   FHS 10d : N_SIM paths of 10 days, innovations drawn from the standardised residuals of the window, mean and
             variance updated along each path; VaR = alpha-quantile of the 10-day cumulative log return.

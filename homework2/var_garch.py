@@ -1,4 +1,6 @@
-"""Homework 2, Point 1 - conditional VaR, models M09-M15: AR(1)-GJR-GARCH(1,1) on a rolling window of W_ROLL days.
+"""Homework 2, Point 1 - conditional VaR, models M09-M15 (AR(1)-GJR-GARCH(1,1), rolling window of W_ROLL days)
+and M20 (EWMA mean and variance with Gaussian quantile).
+Responsible: member B (reviewer: C).
 The same conditional mean/volatility is combined with different quantiles of the standardised innovations z:
     M09 Normal                       (parameters by Gaussian QML)
     M10 standardised Student-t       (parameters by Student-t MLE, df estimated)
@@ -8,6 +10,7 @@ The same conditional mean/volatility is combined with different quantiles of the
     M15 GPD on the excesses of -z over its GPD_U_Q quantile
 M11-M15 use the residuals z of the Gaussian QML fit on the window (W_ROLL - 1 values).
 VaR_t = mu_t + sigma_t * q_alpha(z), mu_t and sigma_t forecast at t-1 with data of the window only.
+M20: m_t = lam*m_{t-1} + (1-lam)*r_{t-1}, s2_t = lam*s2_{t-1} + (1-lam)*(r_{t-1} - m_{t-1})^2, VaR_t = m_t + s_t*z_alpha.
 Also writes, for Point 4, the Expected Shortfall and the PIT u_t = F_t(r_t) of the GARCH-based models
 (outputs/es_inputs/garch/<series>.csv).
 
@@ -39,6 +42,20 @@ def gpd_tail_prob(x, u, xi, beta, n, N_u):
     return N_u / n * (1 + xi * (x - u) / beta) ** (-1 / xi) if abs(xi) > 1e-8 else N_u / n * np.exp(-(x - u) / beta)
 
 
+def ewma_mean_var(x, lam=EWMA_LAMBDA, n_init=60):
+    """EWMA forecasts for day t+1 made with data up to t:
+        m_{t+1} = lam*m_t + (1-lam)*x_t ,   s2_{t+1} = lam*s2_t + (1-lam)*(x_t - m_t)^2.
+    Started with the mean/variance of the first n_init days. The weight of the starting value after 5 years is
+    lam^1260 ~ 1e-34, so running the recursion on the whole sample is numerically identical to restarting it
+    on each 5-year rolling window (and far faster)."""
+    m = np.empty(len(x) + 1); s2 = np.empty(len(x) + 1)
+    m[0], s2[0] = x[:n_init].mean(), x[:n_init].var(ddof=1)  # starting values
+    for t in range(len(x)):
+        s2[t + 1] = lam * s2[t] + (1 - lam) * (x[t] - m[t]) ** 2   # EWMA variance around the EWMA mean
+        m[t + 1] = lam * m[t] + (1 - lam) * x[t]                   # EWMA mean
+    return m[1:], s2[1:]           # element t = forecast for day t+1
+
+
 def run_series(name):
     t0 = time.time()
     r = load_returns()[name].dropna()
@@ -46,6 +63,7 @@ def run_series(name):
     pos = r.index.get_indexer(dates)
     x = r.values
 
+    m_ew, s2_ew = ewma_mean_var(x)                           # M20: EWMA forecasts (element i-1 = forecast for day i)
     var_rows, es_rows, par_rows = [], [], []                 # VaR, ES/PIT inputs of Point 4, parameters
     thN = thT = pg = pp = None                               # previous estimates (warm start)
     for k, i in enumerate(pos):
@@ -78,6 +96,7 @@ def run_series(name):
             vrow[f"M13_AG_GEV_{a}"] = mu - sig * genextreme.ppf(p ** BLOCK, *pg)                   # (13)
             vrow[f"M14_AG_GEVT_{a}"] = mu - sig * genextreme.ppf(p ** (BLOCK * theta), *pg) if np.isfinite(theta) else np.nan   # (14)
             vrow[f"M15_AG_GPD_{a}"] = mu - sig * q_gpd                                             # (15)
+            vrow[f"M20_EWMA_{a}"] = m_ew[i - 1] + np.sqrt(s2_ew[i - 1]) * stats.norm.ppf(a)        # (20) EWMA
             # Expected Shortfall (return units, negative) for Point 4
             erow[f"ES_AG_N_{a}"] = mu - sig * stats.norm.pdf(stats.norm.ppf(a)) / a                # Gaussian ES
             erow[f"ES_AG_T_{a}"] = muT + sigT * gc.std_t_es(a, nu)                                 # Student-t ES
@@ -93,7 +112,8 @@ def run_series(name):
         var_rows.append(vrow); es_rows.append(erow)
         par_rows.append(dict(zip([f"N_{n}" for n in gc.PARAM_NAMES], thN)) | dict(zip([f"T_{n}" for n in gc.PARAM_NAMES + ["nu"]], thT))
                         | {"mu": mu, "sigma": sig, "z_skew": S, "z_exkurt": K, "gev_xi": -pg[0], "theta": theta,
-                           "gpd_u": u, "gpd_xi": pp[0], "gpd_beta": pp[1]})   # parameters of the day
+                           "gpd_u": u, "gpd_xi": pp[0], "gpd_beta": pp[1],
+                           "ewma_mean": m_ew[i - 1], "ewma_sd": np.sqrt(s2_ew[i - 1])})   # parameters of the day
 
     save_var(SCRIPT, name, pd.DataFrame(var_rows, index=dates))   # -> outputs/var/garch/<series>.csv
     for sub, rows in (("es_inputs", es_rows), ("params", par_rows)):   # ES/PIT inputs (Point 4) and parameters
@@ -106,5 +126,5 @@ def run_series(name):
 if __name__ == "__main__":
     ensure_dirs()
     series = sys.argv[1:] or list(load_returns().columns)
-    print(f"var_garch: models M09-M15 on {len(series)} series, AR(1)-GJR-GARCH(1,1), window {W_ROLL}, refit every {REFIT} day(s)")
+    print(f"var_garch: models M09-M15, M20 on {len(series)} series, AR(1)-GJR-GARCH(1,1), window {W_ROLL}, refit every {REFIT} day(s)")
     run_parallel(run_series, series)

@@ -1,4 +1,5 @@
 """Homework 2, Point 1 - factor-based VaR (stocks and EWP only, NOT the market index):
+Responsible: member C (reviewer: B). Bonus models (22+), if any, go in this script.
     mapping   r_i,t = a_i + b_i' f_t + e_i,t   (OLS on the 5-year rolling window, f = Fama-French Europe 5 factors)
     M16 / M17  CCC / DCC(1,1) on the factors, Gaussian:  VaR_i = a_i + b_i' mu_f + z_alpha * sqrt(b_i' Sigma_f b_i + s2_e,i)
     M18 / M19  CCC / DCC + Filtered Historical Simulation: factor innovations devolatilised and decorrelated,
